@@ -22,24 +22,7 @@ const EmacsMenuItem = new Lang.Class({
         this.parent(name);
         this.name = name
 
-        this._removeButton = new St.Button({
-            child: new St.Icon({
-                icon_name: 'edit-delete',
-                icon_type: St.IconType.SYMBOLIC,
-                icon_size: 24
-            })
-        });
-        this.addActor(this._removeButton);
-
-        this._removeButton.connect('clicked',
-                                   Lang.bind(this, this._kill));
         this.connect('activate', Lang.bind(this, this._start))
-    },
-
-    _kill: function() {
-        Util.spawn(['emacsclient',
-                    '-s', this.name,
-                    '-e', '(kill-emacs)'])
     },
 
     _start: function() {
@@ -64,18 +47,9 @@ const EmacsStatusButton = new Lang.Class({
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction(_("Start emacs server"),
                             Lang.bind(this, this._startEmacsServer));
+        this.actor.connect('button-press-event', Lang.bind(this, this._update));
 
         this._update();
-
-        this._monitor = serversDir.monitor(Gio.FileMonitorFlags.NONE,
-                                           null);
-        this._monitorEv = this._monitor.connect('changed',
-                                                Lang.bind(this, this._update))
-    },
-
-    destroy: function() {
-        this._monitor.cancel();
-        this.parent();
     },
 
     _startEmacsServer: function() {
@@ -118,7 +92,7 @@ const EmacsRunDialog = new Lang.Class({
 
         label = new St.Label({
             style_class: 'run-dialog-label',
-            text: _("Please enter an emacs server name:")
+            text: _("Please enter emacs server name:")
         });
         this.contentLayout.add(label, { y_align: St.Align.START });
 
@@ -169,14 +143,12 @@ const EmacsRunDialog = new Lang.Class({
             this._run(o.get_text());
             if (!this._commandError) {
                 this.close();
-            }
-            else {
+            } else {
                 if (!this.pushModal())
                     this.close();
             }
             return true;
-        }
-        else if (sym == Clutter.Escape) {
+        } else if (sym == Clutter.Escape) {
             this.close();
             return true;
         }

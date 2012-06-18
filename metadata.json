@@ -1,1 +1,1 @@
-{"shell-version": ["3.4.1"], "uuid": "emacsmanager@localvoid.gmail.com", "name": "Emacs Manager", "description": "Shows all running emacs servers and allows connecting or killing them."}
+{"shell-version": ["3.4.1"], "uuid": "emacsmanager@localvoid.gmail.com", "name": "Emacs Manager", "description": "Shows all running emacs servers and allows connecting to them."}
