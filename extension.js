@@ -16,20 +16,37 @@ let serversDir;
 
 const EmacsMenuItem = new Lang.Class({
     Name: 'EmacsManager.EmacsMenuItem',
-    Extends: PopupMenu.PopupMenuItem,
+    Extends: PopupMenu.PopupBaseMenuItem,
 
     _init: function(name) {
-        this.parent(name);
-        this.name = name
+        this.parent({
+            reactive: false
+        });
 
-        this.connect('activate', Lang.bind(this, this._start))
+        this.name = name;
+
+        let a = new PopupMenu.PopupMenuItem(name);
+        this.addActor(a.actor, {expand: true});
+
+        let b = new St.Button({
+            child: new St.Icon({
+                icon_name: 'edit-delete',
+                icon_type: St.IconType.SYMBOLIC,
+                icon_size: 22
+            })
+        });
+        this.addActor(b);
+
+        a.connect('activate', Lang.bind(this, this._onStartClient));
+        b.connect('clicked', Lang.bind(this, this._onKillServer));
     },
 
-    _start: function() {
-        Util.spawn(['emacsclient',
-                    '-c',
-                    '-n',
-                    '-s', this.name])
+    _onStartClient: function(e) {
+        this.emit('start-client', { name: this.name });
+    },
+
+    _onKillServer: function(e) {
+        this.emit('kill-server', { name: this.name });
     }
 });
 
@@ -46,14 +63,30 @@ const EmacsStatusButton = new Lang.Class({
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction(_("Start emacs server"),
-                            Lang.bind(this, this._startEmacsServer));
+                            Lang.bind(this, this._onStartServer));
+
         this.actor.connect('button-press-event', Lang.bind(this, this._update));
 
         this._update();
     },
 
-    _startEmacsServer: function() {
+    _onStartServer: function() {
         emDialog.open();
+    },
+
+    _onStartClient: function(e) {
+        this.menu.close();
+        Util.spawn(['emacsclient',
+                    '-c',
+                    '-n',
+                    '-s', e.name])
+    },
+
+    _onKillServer: function(e) {
+        this.menu.close();
+        Util.spawn(['emacsclient',
+                    '-s', e.name,
+                    '-e', '(kill-emacs)'])
     },
 
     _update: function(e) {
@@ -72,7 +105,10 @@ const EmacsStatusButton = new Lang.Class({
 
         while ((info = fileEnum.next_file(null)) != null) {
             let name = info.get_name();
-            this._contentSection.addMenuItem(new EmacsMenuItem(name));
+            let item = new EmacsMenuItem(name, this);
+            item.connect('start-client', Lang.bind(this, this._onStartClient));
+            item.connect('kill-server', Lang.bind(this, this._onKillServer));
+            this._contentSection.addMenuItem(item);
         }
         fileEnum.close(null);
     }
@@ -201,7 +237,7 @@ function enable() {
 
     em = new EmacsStatusButton();
     emDialog = new EmacsRunDialog();
-    Main.panel.addToStatusArea('emacs-manager', em)
+    Main.panel.addToStatusArea('emacs-launcher', em)
 }
 
 function disable() {
