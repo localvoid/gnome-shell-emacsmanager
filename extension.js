@@ -201,7 +201,7 @@ function enable() {
 
     em = new EmacsStatusButton();
     emDialog = new EmacsRunDialog();
-    Main.panel.addToStatusArea('emacs-launcher', em)
+    Main.panel.addToStatusArea('emacs-manager', em)
 }
 
 function disable() {
