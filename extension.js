@@ -65,7 +65,7 @@ const EmacsStatusButton = new Lang.Class({
         this.menu.addAction(_("Start emacs server"),
                             Lang.bind(this, this._onStartServer));
 
-        this.actor.connect('button-press-event', Lang.bind(this, this._update));
+        this.menu.connect('open-state-changed', Lang.bind(this, this._update));
 
         this._update();
     },
@@ -90,27 +90,29 @@ const EmacsStatusButton = new Lang.Class({
     },
 
     _update: function(e) {
-        this._contentSection.removeAll();
-        let file,
-            info,
-            fileEnum;
+        if (e) {
+            this._contentSection.removeAll();
+            let file,
+                info,
+                fileEnum;
 
-        try {
-            fileEnum = serversDir.enumerate_children('standard::*',
-                                                     Gio.FileQueryInfoFlags.NONE,
-                                                     null);
-        } catch (e) {
-            return;
-        }
+            try {
+                fileEnum = serversDir.enumerate_children('standard::*',
+                                                         Gio.FileQueryInfoFlags.NONE,
+                                                         null);
+            } catch (e) {
+                return;
+            }
 
-        while ((info = fileEnum.next_file(null)) != null) {
-            let name = info.get_name();
-            let item = new EmacsMenuItem(name, this);
-            item.connect('start-client', Lang.bind(this, this._onStartClient));
-            item.connect('kill-server', Lang.bind(this, this._onKillServer));
-            this._contentSection.addMenuItem(item);
+            while ((info = fileEnum.next_file(null)) != null) {
+                let name = info.get_name();
+                let item = new EmacsMenuItem(name, this);
+                item.connect('start-client', Lang.bind(this, this._onStartClient));
+                item.connect('kill-server', Lang.bind(this, this._onKillServer));
+                this._contentSection.addMenuItem(item);
+            }
+            fileEnum.close(null);
         }
-        fileEnum.close(null);
     }
 });
 
