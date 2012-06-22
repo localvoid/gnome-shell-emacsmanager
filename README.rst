@@ -3,6 +3,7 @@
 =========================
 
 Gnome shell extension for working with local emacs servers.
+`https://extensions.gnome.org/extension/361/emacs-manager/`_
 
 Virtual Environment
 -------------------
