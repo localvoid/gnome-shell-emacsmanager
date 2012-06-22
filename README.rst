@@ -28,9 +28,11 @@ desktop-save-mode
 Saving and restoring emacs sessions.
 
 Create new directory in your emacs folder::
+
     $ mkdir ~/.emacs.d/desktop
 
 and add this to your init.el file::
+
     (setq desktop-dirname             "~/.emacs.d/desktop/"
           desktop-base-file-name      (concat server-name ".desktop")
           desktop-base-lock-name      (concat server-name ".lock")
