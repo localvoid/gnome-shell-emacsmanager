@@ -23,3 +23,21 @@ and launch emacs server::
 
     $ emacs --daemon=my-venv
 
+desktop-save-mode
+-----------------
+Saving and restoring emacs sessions.
+
+Create new directory in your emacs folder::
+    $ mkdir ~/.emacs.d/desktop
+
+and add this to your init.el file::
+    (setq desktop-dirname             "~/.emacs.d/desktop/"
+          desktop-base-file-name      (concat server-name ".desktop")
+          desktop-base-lock-name      (concat server-name ".lock")
+          desktop-path                (list desktop-dirname)
+          desktop-save                t
+          desktop-files-not-to-save   "^$" ;reload tramp paths
+          desktop-load-locked-desktop nil)
+    (desktop-save-mode 1)
+
+
