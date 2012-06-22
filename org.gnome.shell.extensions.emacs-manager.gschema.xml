@@ -1,0 +1,12 @@
+<schemalist>
+  <schema id="org.gnome.shell.extensions.emacs-manager" path="/org/gnome/shell/extensions/emacs-manager/">
+    <key name="custom-socket-dir-enabled" type="b">
+      <default>false</default>
+      <summary>Use custom socket directory.</summary>
+    </key>
+    <key name="custom-socket-dir" type="s">
+      <default>""</default>
+      <summary>Custom socket directory.</summary>
+    </key>
+  </schema>
+</schemalist>

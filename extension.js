@@ -10,9 +10,17 @@ const PanelMenu = imports.ui.panelMenu;
 const ModalDialog = imports.ui.modalDialog;
 const PopupMenu = imports.ui.popupMenu;
 
-let em;
-let emDialog;
-let serversDir;
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Convenience = Me.imports.convenience;
+
+const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
+const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
+
+let settings;
+let emStatusButton;
+let emRunDialog;
+let defaultSocketDir;
 
 const EmacsMenuItem = new Lang.Class({
     Name: 'EmacsManager.EmacsMenuItem',
@@ -61,7 +69,6 @@ const EmacsStatusButton = new Lang.Class({
         this._contentSection = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._contentSection);
 
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction(_("Start emacs server"),
                             Lang.bind(this, this._onStartServer));
 
@@ -71,7 +78,7 @@ const EmacsStatusButton = new Lang.Class({
     },
 
     _onStartServer: function() {
-        emDialog.open();
+        emRunDialog.open();
     },
 
     _onStartClient: function(e) {
@@ -94,14 +101,29 @@ const EmacsStatusButton = new Lang.Class({
             this._contentSection.removeAll();
             let file,
                 info,
-                fileEnum;
+                fileEnum,
+                socketDir;
+
+            if (settings.get_boolean(SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY)) {
+                socketDir = settings.get_string(SETTINGS_CUSTOM_SOCKET_DIR_KEY);
+            } else {
+                socketDir = defaultSocketDir;
+            }
+            socketDir = Gio.file_new_for_path(socketDir);
 
             try {
-                fileEnum = serversDir.enumerate_children('standard::*',
-                                                         Gio.FileQueryInfoFlags.NONE,
-                                                         null);
+                fileEnum = socketDir.enumerate_children('standard::*',
+                                                        Gio.FileQueryInfoFlags.NONE,
+                                                        null);
             } catch (e) {
                 return;
+            }
+            if (info == null && this._separator) {
+                this._separator.destroy();
+                this._separator = undefined;
+            } else if (info && !this._separator) {
+                this._separator = new PopupMenu.PopupSeparatorMenuItem();
+                this.menu.addMenuItem(this._separator, 1);
             }
 
             while ((info = fileEnum.next_file(null)) != null) {
@@ -233,21 +255,25 @@ const EmacsRunDialog = new Lang.Class({
 
 
 function enable() {
-    let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null);
-    let uid = (''+ret[1]).replace(/\s+$/, '');
-    serversDir = Gio.file_new_for_path('/tmp/emacs' + uid)
+    let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null),
+        uid = (''+ret[1]).replace(/\s+$/, '');
 
-    em = new EmacsStatusButton();
-    emDialog = new EmacsRunDialog();
-    Main.panel.addToStatusArea('emacs-manager', em)
+    defaultSocketDir = '/tmp/emacs' + uid;
+
+    emStatusButton = new EmacsStatusButton();
+    emRunDialog = new EmacsRunDialog();
+    Main.panel.addToStatusArea('emacs-manager', emStatusButton)
 }
 
 function disable() {
-    serversDir = undefined;
+    emStatusButton.destroy();
+    emRunDialog.destroy();
 
-    em.destroy();
-    emDialog.destroy();
+    defaultSocketDir = undefined;
+    emStatusButton = undefined;
+    emRunDialog = undefined;
 }
 
 function init() {
+    settings = Convenience.getSettings();
 }
