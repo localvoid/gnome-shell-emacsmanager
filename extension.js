@@ -102,7 +102,8 @@ const EmacsStatusButton = new Lang.Class({
             let file,
                 info,
                 fileEnum,
-                socketDir;
+                socketDir,
+                count = 0;
 
             if (settings.get_boolean(SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY)) {
                 socketDir = settings.get_string(SETTINGS_CUSTOM_SOCKET_DIR_KEY);
@@ -118,13 +119,6 @@ const EmacsStatusButton = new Lang.Class({
             } catch (e) {
                 return;
             }
-            if (info == null && this._separator) {
-                this._separator.destroy();
-                this._separator = undefined;
-            } else if (info && !this._separator) {
-                this._separator = new PopupMenu.PopupSeparatorMenuItem();
-                this.menu.addMenuItem(this._separator, 1);
-            }
 
             while ((info = fileEnum.next_file(null)) != null) {
                 let name = info.get_name();
@@ -132,8 +126,21 @@ const EmacsStatusButton = new Lang.Class({
                 item.connect('start-client', Lang.bind(this, this._onStartClient));
                 item.connect('kill-server', Lang.bind(this, this._onKillServer));
                 this._contentSection.addMenuItem(item);
+                count += 1;
             }
             fileEnum.close(null);
+
+            if (count > 0) {
+                if (!this._separator) {
+                    this._separator = new PopupMenu.PopupSeparatorMenuItem();
+                    this.menu.addMenuItem(this._separator, 1);
+                }
+            } else {
+                if (this._separator) {
+                    this._separator.destroy();
+                    this._separator = undefined;
+                }
+            }
         }
     }
 });
