@@ -33,13 +33,13 @@ Create new directory in your emacs folder::
 
 and add this to your init.el file::
 
-    (setq desktop-dirname             "~/.emacs.d/desktop/"
-          desktop-base-file-name      (concat server-name ".desktop")
-          desktop-base-lock-name      (concat server-name ".lock")
-          desktop-path                (list desktop-dirname)
-          desktop-save                t
-          desktop-files-not-to-save   "^$" ;reload tramp paths
-          desktop-load-locked-desktop nil)
-    (desktop-save-mode 1)
-
+    (when (daemonp)
+      (setq desktop-dirname             "~/.emacs.d/desktop/"
+            desktop-base-file-name      (concat (daemonp) ".desktop")
+            desktop-base-lock-name      (concat (daemonp) ".lock")
+            desktop-path                (list desktop-dirname)
+            desktop-save                t
+            desktop-files-not-to-save   "^$" ;reload tramp paths
+            desktop-load-locked-desktop nil)
+    (desktop-save-mode 1))
 
