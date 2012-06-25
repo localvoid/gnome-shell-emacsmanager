@@ -118,6 +118,7 @@ const EmacsStatusButton = new Lang.Class({
                                                         Gio.FileQueryInfoFlags.NONE,
                                                         null);
             } catch (e) {
+                this._removeSeparator();
                 return;
             }
 
@@ -131,17 +132,25 @@ const EmacsStatusButton = new Lang.Class({
             }
             fileEnum.close(null);
 
+            global.log('count: ' + count);
             if (count > 0) {
-                if (!this._separator) {
-                    this._separator = new PopupMenu.PopupSeparatorMenuItem();
-                    this.menu.addMenuItem(this._separator, 1);
-                }
+                this._addSeparator();
             } else {
-                if (this._separator) {
-                    this._separator.destroy();
-                    this._separator = undefined;
-                }
+                this._removeSeparator();
             }
+        }
+    },
+
+    _addSeparator: function() {
+        if (!this._separator) {
+            this._separator = new PopupMenu.PopupSeparatorMenuItem();
+            this.menu.addMenuItem(this._separator, 1);
+        }
+    },
+    _removeSeparator: function() {
+        if (this._separator) {
+            this._separator.destroy();
+            this._separator = undefined;
         }
     }
 });
