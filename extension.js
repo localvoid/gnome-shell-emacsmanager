@@ -14,6 +14,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const DIALOG_GROW_TIME = 0.1;
+
 const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
 const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
@@ -324,7 +326,16 @@ const EmacsRunDialog = new Lang.Class({
     },
 
     _run : function(input) {
+        this._commandError = false;
+
         if (input) {
+            let socketDir = settings.get_string(SETTINGS_CUSTOM_SOCKET_DIR_KEY),
+                socketFile = GLib.build_filenamev([socketDir, input]);
+            if (Gio.file_new_for_path(socketFile).query_exists(null)) {
+                this._showError('Emacs server ' + input + ' is already running');
+                return;
+            }
+
             try {
                 let venvDir,
                     venvFile;
@@ -349,8 +360,7 @@ const EmacsRunDialog = new Lang.Class({
         this._errorMessage.set_text(message);
 
         if (!this._errorBox.visible) {
-            let [errorBoxMinHeight, errorBoxNaturalHeight] =
-                this._errorBox.get_preferred_height(-1);
+            let [errorBoxMinHeight, errorBoxNaturalHeight] = this._errorBox.get_preferred_height(-1);
 
             let parentActor = this._errorBox.get_parent();
             Tweener.addTween(parentActor, {
