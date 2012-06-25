@@ -8,5 +8,9 @@
       <default>""</default>
       <summary>Custom socket directory.</summary>
     </key>
+    <key name="virtual-environment-dir" type="s">
+      <default>"~/.emacs.d/virtualenv/"</default>
+      <summary>Virtual environments directory.</summary>
+    </key>
   </schema>
 </schemalist>

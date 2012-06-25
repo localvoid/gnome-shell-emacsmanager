@@ -16,6 +16,7 @@ const Convenience = Me.imports.convenience;
 
 const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
+const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
 
 let settings;
 let emStatusButton;
@@ -225,7 +226,19 @@ const EmacsRunDialog = new Lang.Class({
     _run : function(input) {
         if (input) {
             try {
-                Util.spawn(['emacs', '--daemon=' + input])
+                let venvDir,
+                    venvFile;
+
+                venvDir = settings.get_string(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY);
+                venvDir = venvDir.replace('~', GLib.get_home_dir());
+                venvFile = GLib.build_filenamev([venvDir, input + '.sh']);
+
+                if (Gio.file_new_for_path(venvFile).query_exists(null)) {
+                    Util.spawn(['bash', '-c',
+                                'source ' + venvFile + '; emacs --daemon=' + input+''])
+                } else {
+                    Util.spawn(['emacs', '--daemon=' + input])
+                }
             } catch (e) {
                 this._showError(e.message);
             }

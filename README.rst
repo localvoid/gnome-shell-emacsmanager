@@ -23,6 +23,21 @@ and launch emacs server::
 
     $ emacs --daemon=my-venv
 
+Virtual Environment hooks
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can automaticaly initialize your virtual environment when starting
+emacs servers.
+
+Create file my-venv.sh in Virtual Environment Directory (default:
+~/.emacs.d/virtualenv) with initialization of your environment::
+
+    . ~/my-venv/bin/activate
+    export EXAMPLE_ENVIRONMENT_VAR=1
+
+And next time when you start emacs server with the name 'my-venv', it
+will preload your virtual environment.
+
 desktop-save-mode
 -----------------
 Saving and restoring emacs sessions.
