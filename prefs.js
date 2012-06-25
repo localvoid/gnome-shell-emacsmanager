@@ -9,6 +9,7 @@ const Convenience = Me.imports.convenience;
 const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
 const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
+const SETTINGS_DESKTOP_DIR_KEY = 'desktop-dir';
 
 const CustomDirField = new GObject.Class({
     Name: 'EmacsManager.Prefs.CustomDirField',
@@ -89,6 +90,38 @@ const VirtualEnvDirField = new GObject.Class({
     }
 });
 
+const DesktopDirField = new GObject.Class({
+    Name: 'EmacsManager.Prefs.DesktopDirField',
+    GTypeName: 'DesktopDirField',
+    Extends: Gtk.Box,
+
+    _init: function(settings) {
+        this.parent({
+            orientation: Gtk.Orientation.VERTICAL,
+        });
+        this._settings = settings;
+
+        let desktopDir = this._settings.get_string(SETTINGS_DESKTOP_DIR_KEY);
+        this.pack_start(new Gtk.Label({
+            label: "<b>Desktop Directory</b>",
+            use_markup: true,
+            xalign: 0
+        }), false, false, 0);
+
+
+        this._entry = new Gtk.Entry({
+            text: desktopDir
+        });
+        this._entry.connect('notify::text',
+                            Lang.bind(this, this._onEntryChanged));
+        this.pack_start(this._entry, false, false, 0);
+    },
+
+    _onEntryChanged: function(entry) {
+        this._settings.set_string(SETTINGS_DESKTOP_DIR_KEY, entry.text);
+    }
+});
+
 const EmacsManagerSettingsWidget = new GObject.Class({
     Name: 'EmacsManager.Prefs.EmacsManagerSettingsWidget',
     GTypeName: 'EmacsManagerSettingsWidget',
@@ -104,6 +137,7 @@ const EmacsManagerSettingsWidget = new GObject.Class({
 
         this.pack_start(new CustomDirField(this._settings), false, false, 5);
         this.pack_start(new VirtualEnvDirField(this._settings), false, false, 5);
+        this.pack_start(new DesktopDirField(this._settings), false, false, 5);
     }
 });
 

@@ -12,5 +12,9 @@
       <default>"~/.emacs.d/virtualenv/"</default>
       <summary>Virtual environments directory.</summary>
     </key>
+    <key name="desktop-dir" type="s">
+      <default>"~/.emacs.d/desktop/"</default>
+      <summary>Desktop directory.</summary>
+    </key>
   </schema>
 </schemalist>

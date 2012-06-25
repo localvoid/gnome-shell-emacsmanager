@@ -17,11 +17,16 @@ const Convenience = Me.imports.convenience;
 const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
 const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
+const SETTINGS_DESKTOP_DIR_KEY = 'desktop-dir';
 
 let settings;
 let emStatusButton;
 let emRunDialog;
 let defaultSocketDir;
+
+function _expandPath(path) {
+    return path.replace(new RegExp('^~'), GLib.get_home_dir());
+}
 
 const EmacsMenuItem = new Lang.Class({
     Name: 'EmacsManager.EmacsMenuItem',
@@ -132,7 +137,6 @@ const EmacsStatusButton = new Lang.Class({
             }
             fileEnum.close(null);
 
-            global.log('count: ' + count);
             if (count > 0) {
                 this._addSeparator();
             } else {
@@ -156,6 +160,70 @@ const EmacsStatusButton = new Lang.Class({
 });
 
 
+const EmacsRunCompleter = new Lang.Class({
+    Name: 'EmacsManager.EmacsRunCompleter',
+
+    _init: function() {
+        this._re = new RegExp('([^\\.]+)\\.desktop');
+    },
+
+    getCompletion: function(text) {
+        let common = '',
+            notInit = true,
+            items = this._items,
+            itemsLen = items.length;
+
+        for (let i = 0; i < itemsLen; i++) {
+            if (items[i].indexOf(text) != 0) {
+                continue;
+            }
+            if (notInit) {
+                common = items[i];
+                notInit = false;
+            }
+            common = this._getCommon(common, items[i]);
+        }
+        if (common.length)
+            return common.substr(text.length);
+        return common;
+    },
+
+    update: function() {
+        let fileEnum,
+            path = _expandPath(settings.get_string(SETTINGS_DESKTOP_DIR_KEY)),
+            dir = Gio.file_new_for_path(path);
+
+        this._items = [];
+
+        if (dir.query_exists(null)) {
+            fileEnum = dir.enumerate_children('standard::*',
+                                              Gio.FileQueryInfoFlags.NONE,
+                                              null);
+            while ((info = fileEnum.next_file(null)) != null) {
+                let name = info.get_name();
+                let match = this._re.exec(name);
+                if (match) {
+                    this._items.push(match[1]);
+                }
+            }
+        }
+    },
+
+    _getCommon: function(s1, s2) {
+        let k = 0,
+            s1Len = s1.length,
+            s2Len = s2.length;
+        for (; k < s1Len && k < s2Len; k++) {
+            if (s1[k] != s2[k])
+                break;
+        }
+        if (k == 0)
+            return '';
+        return s1.substr(0, k);
+    }
+});
+
+
 const EmacsRunDialog = new Lang.Class({
     Name: 'EmacsManager.EmacsRunDialog',
     Extends: ModalDialog.ModalDialog,
@@ -166,6 +234,8 @@ const EmacsRunDialog = new Lang.Class({
             errorIcon;
 
         this.parent({ styleClass: 'run-dialog' });
+
+        this._completer = new EmacsRunCompleter();
 
         label = new St.Label({
             style_class: 'run-dialog-label',
@@ -212,6 +282,14 @@ const EmacsRunDialog = new Lang.Class({
                                 Lang.bind(this, this._onKeyPress));
     },
 
+    pushModal: function(timestamp) {
+        let r = this.parent();
+        if (r) {
+            this._completer.update();
+        }
+        return r;
+    },
+
     _onKeyPress: function(o, e) {
         let sym = e.get_key_symbol();
 
@@ -228,8 +306,21 @@ const EmacsRunDialog = new Lang.Class({
         } else if (sym == Clutter.Escape) {
             this.close();
             return true;
+        } else if (sym == Clutter.Tab) {
+            let text = o.get_text(),
+                postfix = this._getCompletion(text);
+
+            if (postfix != null && postfix.length > 0) {
+                o.insert_text(postfix, -1);
+                o.set_cursor_position(text.length + postfix.length);
+            }
+            return true;
         }
         return false;
+    },
+
+    _getCompletion: function(text) {
+        return this._completer.getCompletion(text);
     },
 
     _run : function(input) {
@@ -239,7 +330,7 @@ const EmacsRunDialog = new Lang.Class({
                     venvFile;
 
                 venvDir = settings.get_string(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY);
-                venvDir = venvDir.replace('~', GLib.get_home_dir());
+                venvDir = _expandPath(venvDir);
                 venvFile = GLib.build_filenamev([venvDir, input + '.sh']);
 
                 if (Gio.file_new_for_path(venvFile).query_exists(null)) {
