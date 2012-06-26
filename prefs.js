@@ -10,6 +10,7 @@ const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
 const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
 const SETTINGS_DESKTOP_DIR_KEY = 'desktop-dir';
+const SETTINGS_REMOTE_DIR_KEY = 'remote-dir';
 
 const CustomDirField = new GObject.Class({
     Name: 'EmacsManager.Prefs.CustomDirField',
@@ -59,58 +60,28 @@ const CustomDirField = new GObject.Class({
     }
 });
 
-const VirtualEnvDirField = new GObject.Class({
-    Name: 'EmacsManager.Prefs.VirtualEnvDirField',
-    GTypeName: 'VirtualEnvDirField',
+
+const EntryField = new GObject.Class({
+    Name: 'EmacsManager.Prefs.DirField',
+    GTypeName: 'DirField',
     Extends: Gtk.Box,
-    _init: function(settings) {
+
+    _init: function(settings, name, key) {
         this.parent({
             orientation: Gtk.Orientation.VERTICAL,
         });
         this._settings = settings;
+        this._key = key;
 
-        let virtualEnvDir = this._settings.get_string(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY);
+        let value = this._settings.get_string(key);
         this.pack_start(new Gtk.Label({
-            label: "<b>Virtual Environments Directory</b>",
+            label: name,
             use_markup: true,
             xalign: 0
         }), false, false, 0);
-
-
-        this._virtualEnvDirEntry = new Gtk.Entry({
-            text: virtualEnvDir
-        });
-        this._virtualEnvDirEntry.connect('notify::text',
-                                         Lang.bind(this, this._onVirtualEnvDirEntryChanged));
-        this.pack_start(this._virtualEnvDirEntry, false, false, 0);
-    },
-
-    _onVirtualEnvDirEntryChanged: function(entry) {
-        this._settings.set_string(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY, entry.text);
-    }
-});
-
-const DesktopDirField = new GObject.Class({
-    Name: 'EmacsManager.Prefs.DesktopDirField',
-    GTypeName: 'DesktopDirField',
-    Extends: Gtk.Box,
-
-    _init: function(settings) {
-        this.parent({
-            orientation: Gtk.Orientation.VERTICAL,
-        });
-        this._settings = settings;
-
-        let desktopDir = this._settings.get_string(SETTINGS_DESKTOP_DIR_KEY);
-        this.pack_start(new Gtk.Label({
-            label: "<b>Desktop Directory</b>",
-            use_markup: true,
-            xalign: 0
-        }), false, false, 0);
-
 
         this._entry = new Gtk.Entry({
-            text: desktopDir
+            text: value
         });
         this._entry.connect('notify::text',
                             Lang.bind(this, this._onEntryChanged));
@@ -118,7 +89,7 @@ const DesktopDirField = new GObject.Class({
     },
 
     _onEntryChanged: function(entry) {
-        this._settings.set_string(SETTINGS_DESKTOP_DIR_KEY, entry.text);
+        this._settings.set_string(this._key, entry.text);
     }
 });
 
@@ -136,8 +107,24 @@ const EmacsManagerSettingsWidget = new GObject.Class({
         this._settings = Convenience.getSettings();
 
         this.pack_start(new CustomDirField(this._settings), false, false, 5);
-        this.pack_start(new VirtualEnvDirField(this._settings), false, false, 5);
-        this.pack_start(new DesktopDirField(this._settings), false, false, 5);
+        this.pack_start(
+            new EntryField(this._settings,
+                           "<b>Virtual Environment Hooks Directory</b>",
+                           SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY),
+            false, false, 5
+        );
+        this.pack_start(
+            new EntryField(this._settings,
+                           "<b>Desktop Directory</b>",
+                           SETTINGS_DESKTOP_DIR_KEY),
+            false, false, 5
+        );
+        this.pack_start(
+            new EntryField(this._settings,
+                           "<b>Remote Servers Directory</b>",
+                           SETTINGS_REMOTE_DIR_KEY),
+            false, false, 5
+        );
     }
 });
 

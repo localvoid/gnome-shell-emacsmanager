@@ -11,6 +11,7 @@ zip-file:
 	mkdir $(CURDIR)/_build/schemas
 	cp $(CURDIR)/org.gnome.shell.extensions.emacs-manager.gschema.xml $(CURDIR)/_build/schemas/
 	cp $(CURDIR)/metadata.json $(CURDIR)/_build
+	cp $(CURDIR)/stylesheet.css $(CURDIR)/_build
 	cp $(CURDIR)/extension.js $(CURDIR)/_build
 	cp $(CURDIR)/prefs.js $(CURDIR)/_build
 	cp $(CURDIR)/convenience.js $(CURDIR)/_build

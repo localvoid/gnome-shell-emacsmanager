@@ -20,6 +20,7 @@ const SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY = 'custom-socket-dir-enabled';
 const SETTINGS_CUSTOM_SOCKET_DIR_KEY = 'custom-socket-dir';
 const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
 const SETTINGS_DESKTOP_DIR_KEY = 'desktop-dir';
+const SETTINGS_REMOTE_DIR_KEY = 'remote-dir';
 
 let settings;
 let emStatusButton;
@@ -30,18 +31,44 @@ function _expandPath(path) {
     return path.replace(new RegExp('^~'), GLib.get_home_dir());
 }
 
+const EmacsMenuItemName = new Lang.Class({
+    Name: 'EmacsManager.EmacsMenuItemName',
+    Extends: PopupMenu.PopupBaseMenuItem,
+
+    _init: function(name, remote) {
+        this.parent();
+
+        let box = new St.BoxLayout({
+            vertical: true
+        });
+        box.add(new St.Label({ text: name }),
+                {
+                    expand: true,
+                    y_fill: true,
+                    y_align: St.Align.START
+                });
+        if (remote) {
+            box.add(new St.Label({
+                text: remote,
+                style_class: 'emacs-manager-menu-item-remote-host'
+            }));
+        }
+        this.addActor(box);
+    }
+});
+
 const EmacsMenuItem = new Lang.Class({
     Name: 'EmacsManager.EmacsMenuItem',
     Extends: PopupMenu.PopupBaseMenuItem,
 
-    _init: function(name) {
+    _init: function(name, remote) {
         this.parent({
             reactive: false
         });
 
         this.name = name;
 
-        let a = new PopupMenu.PopupMenuItem(name);
+        let a = new EmacsMenuItemName(name, remote);
         this.addActor(a.actor, {expand: true});
 
         let b = new St.Button({
@@ -89,19 +116,27 @@ const EmacsStatusButton = new Lang.Class({
         emRunDialog.open();
     },
 
+    _onStartRemoteClient: function(e) {
+        this.menu.close();
+        Util.spawn(['emacsclient',
+                    '-c',
+                    '-n',
+                    '-f', e.name]);
+    },
+
     _onStartClient: function(e) {
         this.menu.close();
         Util.spawn(['emacsclient',
                     '-c',
                     '-n',
-                    '-s', e.name])
+                    '-s', e.name]);
     },
 
     _onKillServer: function(e) {
         this.menu.close();
         Util.spawn(['emacsclient',
                     '-s', e.name,
-                    '-e', '(kill-emacs)'])
+                    '-e', '(kill-emacs)']);
     },
 
     _update: function(e) {
@@ -120,24 +155,42 @@ const EmacsStatusButton = new Lang.Class({
             }
             socketDir = Gio.file_new_for_path(socketDir);
 
-            try {
+            if (socketDir.query_exists(null)) {
                 fileEnum = socketDir.enumerate_children('standard::*',
                                                         Gio.FileQueryInfoFlags.NONE,
                                                         null);
-            } catch (e) {
-                this._removeSeparator();
-                return;
+
+                while ((info = fileEnum.next_file(null)) != null) {
+                    let name = info.get_name();
+                    let item = new EmacsMenuItem(name);
+                    item.connect('start-client', Lang.bind(this, this._onStartClient));
+                    item.connect('kill-server', Lang.bind(this, this._onKillServer));
+                    this._contentSection.addMenuItem(item);
+                    count += 1;
+                }
+                fileEnum.close(null);
             }
 
-            while ((info = fileEnum.next_file(null)) != null) {
-                let name = info.get_name();
-                let item = new EmacsMenuItem(name, this);
-                item.connect('start-client', Lang.bind(this, this._onStartClient));
-                item.connect('kill-server', Lang.bind(this, this._onKillServer));
-                this._contentSection.addMenuItem(item);
-                count += 1;
+            let rDir = _expandPath(settings.get_string(SETTINGS_REMOTE_DIR_KEY));
+            let remoteDir = Gio.file_new_for_path(rDir);
+            if (remoteDir.query_exists(null)) {
+                fileEnum = remoteDir.enumerate_children('standard::*',
+                                                        Gio.FileQueryInfoFlags.NONE,
+                                                        null);
+                while ((info = fileEnum.next_file(null)) != null) {
+                    let name = info.get_name();
+                    let [result, contents] = Gio.file_new_for_path(GLib.build_filenamev([rDir, name])).load_contents(null);
+                    contents = new String(contents);
+                    let remote = contents.match(/^([^\s]+)/)[1];
+
+                    let item = new EmacsMenuItem(name, remote);
+                    item.connect('start-client', Lang.bind(this, this._onStartRemoteClient));
+                    this._contentSection.addMenuItem(item);
+                    count += 1;
+                }
+
+                fileEnum.close(null);
             }
-            fileEnum.close(null);
 
             if (count > 0) {
                 this._addSeparator();
