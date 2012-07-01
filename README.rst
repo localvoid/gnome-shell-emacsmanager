@@ -49,6 +49,13 @@ Create new directory in your emacs folder::
 and add this to your init.el file::
 
     (when (daemonp)
+      (defadvice desktop-restore-file-buffer
+        (around my-desktop-restore-file-buffer-advice)
+        "Be non-interactive while starting a daemon."
+        (let ((noninteractive t))
+          ad-do-it))
+      (ad-activate 'desktop-restore-file-buffer)
+
       (setq desktop-dirname             "~/.emacs.d/desktop/"
             desktop-base-file-name      (concat (daemonp) ".desktop")
             desktop-base-lock-name      (concat (daemonp) ".lock")
