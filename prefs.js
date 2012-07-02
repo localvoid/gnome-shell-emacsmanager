@@ -62,8 +62,8 @@ const CustomDirField = new GObject.Class({
 
 
 const EntryField = new GObject.Class({
-    Name: 'EmacsManager.Prefs.DirField',
-    GTypeName: 'DirField',
+    Name: 'EmacsManager.Prefs.EntryField',
+    GTypeName: 'EntryField',
     Extends: Gtk.Box,
 
     _init: function(settings, name, key) {

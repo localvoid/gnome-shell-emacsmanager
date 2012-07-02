@@ -1,5 +1,5 @@
-const Lang = imports.lang;
 const Signals = imports.signals;
+const Lang = imports.lang;
 const GLib = imports.gi.GLib;
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
@@ -23,10 +23,6 @@ const SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY = 'virtual-environment-dir';
 const SETTINGS_DESKTOP_DIR_KEY = 'desktop-dir';
 const SETTINGS_REMOTE_DIR_KEY = 'remote-dir';
 
-let settings;
-let emStatusButton;
-let emRunDialog;
-let defaultSocketDir;
 
 function _expandPath(path) {
     if (path[0] === '~') {
@@ -35,180 +31,194 @@ function _expandPath(path) {
     return path;
 }
 
+function _pathExists(f) {
+    return Gio.file_new_for_path(f).query_exists(null);
+}
+
 function _getPath(key) {
     return _expandPath(settings.get_string(key));
 }
 
-function _getSocketDir() {
-    if (settings.get_boolean(SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY)) {
-        return _getPath(SETTINGS_CUSTOM_SOCKET_DIR_KEY);
-    } else {
-        return defaultSocketDir;
-    }
-}
 
-function _eachFile(dir, fn) {
-    let lf = Gio.file_new_for_path(dir),
-    fileEnum,
-    info;
+const DirMonitor = new Lang.Class({
+    Name: 'EmacsManager.DirMonitor',
 
-    if (lf.query_exists(null)) {
-        fileEnum = lf.enumerate_children('standard::*',
-                                         Gio.FileQueryInfoFlags.NONE,
-                                         null);
-        while ((info = fileEnum.next_file(null)) != null) {
-            fn(info);
-        }
-        fileEnum.close(null);
-    }
-}
-
-
-const EmacsMenuItem = new Lang.Class({
-    Name: 'EmacsManager.EmacsMenuItem',
-    Extends: PopupMenu.PopupBaseMenuItem,
-
-    _init: function(name, remote) {
-        this.parent();
-
-        this.name = name;
-        this.addActor(new St.Label({
-            text: name,
-            style_class: 'emacs-manager-menu-item-name'
-        }));
-
-        if (remote) {
-            this.addActor(new St.Label({
-                text: remote,
-                style_class: 'emacs-manager-menu-item-remote-host'
-            }));
-        } else {
-            let b = new St.Button({
-                child: new St.Icon({
-                    icon_name: 'edit-delete',
-                    icon_type: St.IconType.SYMBOLIC,
-                    icon_size: 16,
-                    style_class: 'emacs-manager-menu-item-kill-server-icon'
-                })
-            });
-            b.connect('clicked', Lang.bind(this, function(e) { this.activate('kill'); }));
-            this.addActor(b, { align: St.Align.END });
-        }
-        this.connect('activate', Lang.bind(this, this._onActivate));
+    _init: function(path, filter) {
+        this.path = path
+        this._snapshot = {};
+        this._filter = filter;
     },
 
-    _onActivate: function(e, c) {
-        if (c === 'kill') {
-            this.emit('kill-server', { name: this.name });
-        } else {
-            this.emit('start-client', { name: this.name });
+    enable: function() {
+        this._file = Gio.file_new_for_path(this.path);
+        this._monitor = this._file.monitor_directory(Gio.FileMonitorFlags.NONE,
+                                                     null);
+        this._monitor.connect('changed', Lang.bind(this, this._onChanged));
+    },
+
+    disable: function() {
+        if (this._monitor !== undefined) {
+            this._monitor.cancel();
+            this._monitor = undefined;
+        }
+    },
+
+    _onChanged: function() {
+        this.update();
+    },
+
+    update: function() {
+        let f = this._file;
+
+        if (f.query_exists(null)) {
+            let en = f.enumerate_children('standard::*',
+                                          Gio.FileQueryInfoFlags.NONE,
+                                          null);
+            let currentSnapshot = {};
+            let info;
+
+            while ((info = en.next_file(null)) != null) {
+                let name = info.get_name();
+                if (this._filter !== undefined) {
+                    if (!name.match(this._filter)) {
+                        continue;
+                    }
+                }
+                currentSnapshot[name] = true;
+                if (this._snapshot[name] === undefined) {
+                    this._snapshot[name] = info;
+                    this.emit('file-added', info, GLib.build_filenamev([this.path, name]));
+                }
+            }
+            en.close(null);
+
+            for (k in this._snapshot) {
+                if (currentSnapshot[k] === undefined) {
+                    this.emit('file-removed', this._snapshot[k], GLib.build_filenamev([this.path, name]));
+                    delete this._snapshot[k];
+                }
+            }
         }
     }
 });
+Signals.addSignalMethods(DirMonitor.prototype);
 
 
-const EmacsStatusButton = new Lang.Class({
-    Name: 'EmacsManager.EmacsStatusButton',
-    Extends: PanelMenu.SystemStatusButton,
+const ServerList = new Lang.Class({
+    Name: 'EmacsManager.ServerList',
 
     _init: function() {
-        this.parent('accessories-text-editor');
-
-        this._contentSection = new PopupMenu.PopupMenuSection();
-        this.menu.addMenuItem(this._contentSection);
-
-        this.menu.addAction(_("Start emacs server"),
-                            Lang.bind(this, this._onStartServer));
-
-        this.menu.connect('open-state-changed', Lang.bind(this, this._onMenuOpen));
+        this.servers = {}
     },
 
-    _onMenuOpen: function(e, c) {
-        if (c) {
-            this._update();
+    add: function(s) {
+        this.servers[s.name] = s;
+        this.emit('added', s);
+    },
+    remove: function(s) {
+        delete this.servers[s];
+        this.emit('removed', s);
+    },
+    destroy: function() {
+    }
+});
+Signals.addSignalMethods(ServerList.prototype);
+
+
+const Server = new Lang.Class({
+    Name: 'EmacsManager.Server',
+
+    _init: function(name) {
+        this.name = name;
+        this.state = 'RUNNING';
+    }
+});
+Signals.addSignalMethods(Server.prototype);
+
+
+const LocalServer = new Lang.Class({
+    Name: 'EmacsManager.LocalServer',
+    Extends: Server,
+
+    _init: function(name) {
+        this.parent(name);
+    },
+
+    kill: function() {
+        if (this.state == 'RUNNING') {
+            Util.spawn(['emacsclient',
+                        '-s', this.name,
+                        '-e', '(kill-emacs)']);
+            this.state = 'KILLING';
         }
     },
 
-    _onStartServer: function() {
-        emRunDialog.open();
-    },
-
-    _onStartRemoteClient: function(e) {
-        Util.spawn(['emacsclient',
-                    '-c',
-                    '-n',
-                    '-f', e.name]);
-    },
-
-    _onStartClient: function(e) {
-        Util.spawn(['emacsclient',
-                    '-c',
-                    '-n',
-                    '-s', e.name]);
-    },
-
-    _onKillServer: function(e) {
-        Util.spawn(['emacsclient',
-                    '-s', e.name,
-                    '-e', '(kill-emacs)']);
-    },
-
-    _update: function(e, c) {
-        this._contentSection.removeAll();
-        let socketDir,
-            remoteDir,
-            count = 0;
-
-        socketDir = _getSocketDir();
-        _eachFile(socketDir, Lang.bind(this, function(info) {
-            let name = info.get_name(),
-                item = new EmacsMenuItem(name);
-            item.connect('start-client', Lang.bind(this, this._onStartClient));
-            item.connect('kill-server', Lang.bind(this, this._onKillServer));
-            this._contentSection.addMenuItem(item);
-            count += 1;
-        }));
-
-
-        remoteDir = _getPath(SETTINGS_REMOTE_DIR_KEY);
-        _eachFile(remoteDir, Lang.bind(this, function(info) {
-            let name = info.get_name();
-            let [result, contents] = Gio.file_new_for_path(GLib.build_filenamev([remoteDir, name])).load_contents(null);
-            contents = new String(contents);
-            contents = contents.match(/^([^\s]+)/)[1];
-
-            let item = new EmacsMenuItem(name, contents);
-            item.connect('start-client', Lang.bind(this, this._onStartRemoteClient));
-            this._contentSection.addMenuItem(item);
-            count += 1;
-        }));
-
-        if (count > 0) {
-            if (!this._separator) {
-                this._separator = new PopupMenu.PopupSeparatorMenuItem();
-                this.menu.addMenuItem(this._separator, 1);
-            }
-        } else {
-            if (this._separator) {
-                this._separator.destroy();
-                this._separator = undefined;
-            }
+    startClient: function() {
+        if (this.state == 'RUNNING') {
+            Util.spawn(['emacsclient',
+                        '-c',
+                        '-n',
+                        '-s', this.name]);
         }
     }
 });
 
 
-const EmacsRunCompleter = new Lang.Class({
-    Name: 'EmacsManager.EmacsRunCompleter',
+const RemoteServer = new Lang.Class({
+    Name: 'EmacsManager.RemoteServer',
+    Extends: Server,
+
+    _init: function(name, host) {
+        this.parent(name);
+        this.host = host;
+    },
+
+    startClient: function() {
+        if (this.state == 'RUNNING') {
+            Util.spawn(['emacsclient',
+                        '-c',
+                        '-n',
+                        '-f', e.name]);
+        }
+    }
+});
+
+
+const RunCompleter = new Lang.Class({
+    Name: 'EmacsManager.RunCompleter',
 
     _init: function() {
         this._re = new RegExp('([^\\.]+)\\.desktop');
+        this._desktops = [];
+
+        let m = this._monitor = new DirMonitor(_getPath(SETTINGS_DESKTOP_DIR_KEY),
+                                               this._re);
+        m.connect('file-added',
+                  Lang.bind(this, this._desktopAdded));
+        m.connect('file-removed',
+                  Lang.bind(this, this._desktopRemoved));
+        m.enable();
+        m.update();
+    },
+
+    destroy: function() {
+        this._monitor.disable();
+    },
+
+    _desktopAdded: function(source, info) {
+        let name = info.get_name(),
+            match = this._re.exec(name);
+
+        this._desktops.push(match[1]);
+    },
+    _desktopRemoved: function(source, n) {
+        delete this._desktops[this._desktops.indexOf(n)];
     },
 
     getCompletion: function(text) {
         let common = '',
             notInit = true,
-            items = this._items,
+            items = this._desktops,
             itemsLen = items.length;
 
         for (let i = 0; i < itemsLen; i++) {
@@ -226,21 +236,6 @@ const EmacsRunCompleter = new Lang.Class({
         return common;
     },
 
-    update: function() {
-        let path = _getPath(SETTINGS_DESKTOP_DIR_KEY);
-
-        this._items = [];
-
-        _eachFile(path, Lang.bind(this, function(info) {
-            let name = info.get_name(),
-                match = this._re.exec(name);
-
-            if (match) {
-                this._items.push(match[1]);
-            }
-        }));
-    },
-
     _getCommon: function(s1, s2) {
         let k = 0,
             s1Len = s1.length,
@@ -256,8 +251,126 @@ const EmacsRunCompleter = new Lang.Class({
 });
 
 
-const EmacsRunDialog = new Lang.Class({
-    Name: 'EmacsManager.EmacsRunDialog',
+/* <view> */
+const MenuItem = new Lang.Class({
+    Name: 'EmacsManager.MenuItem',
+    Extends: PopupMenu.PopupBaseMenuItem,
+
+    _init: function(server) {
+        this.parent();
+
+        this.server = server;
+        this.name = server.name;
+
+        this.addActor(new St.Label({
+            text: server.name,
+            style_class: 'emacs-manager-menu-item-name'
+        }));
+
+        this.connect('activate', Lang.bind(this, this._onActivate));
+    },
+
+    _onActivate: function(e, c) {
+        this.server.startClient();
+    }
+});
+
+const LocalMenuItem = new Lang.Class({
+    Name: 'EmacsManager.LocalMenuItem',
+    Extends: MenuItem,
+
+    _init: function(server) {
+        this.parent(server);
+
+        let b = new St.Button({
+            child: new St.Icon({
+                icon_name: 'window-close',
+                icon_type: St.IconType.SYMBOLIC,
+                icon_size: 16,
+                style_class: 'emacs-manager-menu-item-kill-server-icon'
+            })
+        });
+        b.connect('clicked', Lang.bind(this, this._onKill));
+        this.addActor(b, { align: St.Align.END });
+    },
+
+    _onKill: function(e) {
+        this.server.kill();
+    }
+});
+
+const RemoteMenuItem = new Lang.Class({
+    Name: 'EmacsManager.RemoteMenuItem',
+    Extends: MenuItem,
+
+    _init: function(server) {
+        this.parent(server);
+
+        this.addActor(new St.Label({
+            text: server.host,
+            style_class: 'emacs-manager-menu-item-remote-host'
+        }));
+    }
+});
+
+const StatusButton = new Lang.Class({
+    Name: 'EmacsManager.StatusButton',
+    Extends: PanelMenu.SystemStatusButton,
+
+    _init: function(serverList, runDialog) {
+        this.parent('accessories-text-editor');
+
+        this._serverList = serverList;
+        this._runDialog = runDialog;
+
+        this._contentSection = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(this._contentSection);
+
+        this.menu.addAction(_("Start emacs server"),
+                            Lang.bind(this, this._onStartServer));
+    },
+
+    _onStartServer: function() {
+        this._runDialog.open();
+    },
+
+    update: function() {
+        let servers = this._serverList.servers,
+            counter = 0;
+
+        this._contentSection.removeAll();
+
+        for (name in servers) {
+            let server = servers[name],
+                i;
+
+            if (server instanceof LocalServer) {
+                i = new LocalMenuItem(server);
+            } else if (server instanceof RemoteServer) {
+                i = new RemoteMenuItem(server);
+            }
+
+            this._contentSection.addMenuItem(i);
+            counter += 1;
+        }
+
+        if (counter > 0) {
+            if (!this._separator) {
+                this._separator = new PopupMenu.PopupSeparatorMenuItem();
+                this.menu.addMenuItem(this._separator, 1);
+            }
+        } else {
+            if (this._separator) {
+                this._separator.destroy();
+                this._separator = undefined;
+            }
+        }
+    }
+});
+
+
+const RunDialog = new Lang.Class({
+    Name: 'EmacsManager.RunDialog',
     Extends: ModalDialog.ModalDialog,
 
     _init: function() {
@@ -267,7 +380,7 @@ const EmacsRunDialog = new Lang.Class({
 
         this.parent({ styleClass: 'run-dialog' });
 
-        this._completer = new EmacsRunCompleter();
+        this._completer = new RunCompleter();
 
         label = new St.Label({
             style_class: 'run-dialog-label',
@@ -314,14 +427,6 @@ const EmacsRunDialog = new Lang.Class({
                                 Lang.bind(this, this._onKeyPress));
     },
 
-    pushModal: function(timestamp) {
-        let r = this.parent();
-        if (r) {
-            this._completer.update();
-        }
-        return r;
-    },
-
     _onKeyPress: function(o, e) {
         let sym = e.get_key_symbol();
 
@@ -359,23 +464,8 @@ const EmacsRunDialog = new Lang.Class({
         this._commandError = false;
 
         if (input) {
-            let socketFile = GLib.build_filenamev([_getSocketDir(), input]);
-            if (Gio.file_new_for_path(socketFile).query_exists(null)) {
-                this._showError('Emacs server "' + input + '" is already running');
-                return;
-            }
-
-            try {
-                let venvDir = _getPath(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY),
-                    venvFile = GLib.build_filenamev([venvDir, input + '.sh']);
-
-                // Virtual Environment hooks
-                if (Gio.file_new_for_path(venvFile).query_exists(null)) {
-                    Util.spawn(['bash', '-c',
-                                'source ' + venvFile + '; emacs --daemon=' + input+''])
-                } else {
-                    Util.spawn(['emacs', '--daemon=' + input])
-                }
+            try{
+                ext.startServer(input);
             } catch (e) {
                 this._showError(e.message);
             }
@@ -408,28 +498,153 @@ const EmacsRunDialog = new Lang.Class({
         this._entryText.set_text('');
         this._commandError = false;
         this.parent();
+    },
+
+    destroy: function() {
+        this._completer.destroy();
+        this.parent();
     }
 });
 
 
+const View = new Lang.Class({
+    Name: 'EmacsManager.View',
+
+    _init: function(serverList) {
+        this._runDialog = new RunDialog();
+        this._statusButton = new StatusButton(serverList, this._runDialog);
+        this._serverList = serverList;
+        Main.panel.addToStatusArea('emacs-manager', this._statusButton)
+    },
+
+    destroy: function() {
+        this._statusButton.destroy();
+        this._runDialog.destroy();
+    },
+
+    update: function() {
+        this._statusButton.update();
+    }
+});
+/* </view> */
+
+
+const Extension = new Lang.Class({
+    Name: 'EmacsManager.Extension',
+
+    _init: function() {
+        let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null),
+            uid = (''+ret[1]).replace(/\s+$/, '');
+
+        this._defaultSocketDir = '/tmp/emacs' + uid;
+
+        let sl = this._serverList = new ServerList();
+        let v = this._view = new View(sl);
+        this._monitors = [];
+
+        sl.connect('added', Lang.bind(v, v.update));
+        sl.connect('removed', Lang.bind(v, v.update));
+        sl.connect('changed', Lang.bind(v, v.update));
+
+        this._initMonitors();
+    },
+
+    _initMonitors: function() {
+        let local = new DirMonitor(this._getSocketDir());
+        local.connect('file-added',
+                      Lang.bind(this, this._localServerAdded));
+        local.connect('file-removed',
+                      Lang.bind(this, this._localServerRemoved));
+        local.enable();
+        local.update();
+
+        this._monitors.push(local);
+
+
+        let remote = new DirMonitor(_getPath(SETTINGS_REMOTE_DIR_KEY));
+        remote.connect('file-added',
+                       Lang.bind(this, this._remoteServerAdded));
+        remote.connect('file-removed',
+                       Lang.bind(this, this._remoteServerRemoved));
+        remote.enable();
+        remote.update();
+
+        this._monitors.push(remote);
+    },
+
+    _localServerAdded: function(source, info, path) {
+        let s = new LocalServer(info.get_name());
+        this._serverList.add(s);
+    },
+
+    _localServerRemoved: function(source, info, path) {
+        this._serverList.remove(info.get_name());
+    },
+
+    _remoteServerAdded: function(source, info, path) {
+        let [result, contents] = Gio.file_new_for_path(path).load_contents(null);
+        contents = new String(contents);
+        contents = contents.match(/^([^\s]+)/)[1];
+
+        let s = new RemoteServer(info.get_name(), contents);
+        this._serverList.add(s);
+    },
+
+    _remoteServerRemoved: function(source, info, path) {
+        this._serverList.remove(info.get_name());
+    },
+
+    _getSocketDir: function() {
+        if (settings.get_boolean(SETTINGS_CUSTOM_SOCKET_DIR_ENABLED_KEY)) {
+            return _getPath(SETTINGS_CUSTOM_SOCKET_DIR_KEY);
+        } else {
+            return this._defaultSocketDir;
+        }
+    },
+
+    startServer: function(name) {
+        if (this._serverList.servers[name] !== undefined) {
+             throw Error('Emacs server "' + name + '" is already running');
+        }
+
+        let venvDir = _getPath(SETTINGS_VIRTUAL_ENVIRONMENT_DIR_KEY),
+            venvFile = GLib.build_filenamev([venvDir, name + '.sh']),
+            argv;
+
+        // Virtual Environment hooks
+        if (_pathExists(venvFile)) {
+            argv = ['bash', '-c',
+                    'source ' + venvFile + '; emacs --daemon=' + name +''];
+        } else {
+            argv = ['emacs', '--daemon=' + name];
+        }
+
+        Util.spawn(argv);
+    },
+
+    destroy: function() {
+        this._view.destroy();
+        this._serverList.destroy();
+        for (i in this._monitors) {
+            this._monitors[i].disable();
+        }
+    },
+
+    shutdown: function() {
+    }
+});
+
+
+let settings;
+let ext;
+
 function enable() {
-    let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null),
-        uid = (''+ret[1]).replace(/\s+$/, '');
-
-    defaultSocketDir = '/tmp/emacs' + uid;
-
-    emStatusButton = new EmacsStatusButton();
-    emRunDialog = new EmacsRunDialog();
-    Main.panel.addToStatusArea('emacs-manager', emStatusButton)
+    ext = new Extension();
 }
 
 function disable() {
-    emStatusButton.destroy();
-    emRunDialog.destroy();
-
-    defaultSocketDir = undefined;
-    emStatusButton = undefined;
-    emRunDialog = undefined;
+    ext.destroy();
+    ext = undefined;
 }
 
 function init() {
