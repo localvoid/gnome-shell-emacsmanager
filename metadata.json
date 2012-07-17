@@ -1,7 +1,6 @@
 {
     "extension-id": "emacs-manager",
     "uuid": "emacsmanager@localvoid.gmail.com",
-    "settings-schema": "org.gnome.shell.extensions.emacs-manager",
     "name": "Emacs Manager",
     "description": "Shows all running emacs servers and allows connecting to them.",
     "original-authors": ["localvoid@gmail.com"],
