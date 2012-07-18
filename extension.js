@@ -151,25 +151,31 @@ const Extension = new Lang.Class({
                                  'org.freedesktop.DBus',
                                  '/org/freedesktop/DBus');
 
-        let [result, error] = dbus.StartServiceByNameSync('com.localvoid.EmacsManager', 0);
-        if (error) {
-            let shellProxy = new GnomeShellProxy(Gio.DBus.session,
-                                                 'org.gnome.Shell',
-                                                 '/org/gnome/Shell');
-            shellProxy.DisableExtensionSync(UUID);
-        } else {
-            if (result) {
-                this._emacsManager = new EmacsManager();
-                this._runCompleter = new Autocomplete.RunCompleter(EMACS_DESKTOP_DIR);
-                this._view = new Views.View(this._emacsManager, this._runCompleter);
+        dbus.StartServiceByNameRemote('com.localvoid.EmacsManager', 0, function(result, error) {
+            if (error) {
+                let shellProxy = new GnomeShellProxy(Gio.DBus.session,
+                                                     'org.gnome.Shell',
+                                                     '/org/gnome/Shell');
+                shellProxy.DisableExtensionSync(UUID);
+            } else {
+                if (result) {
+                    this._emacsManager = new EmacsManager();
+                    this._runCompleter = new Autocomplete.RunCompleter(EMACS_DESKTOP_DIR);
+                    this._view = new Views.View(this._emacsManager, this._runCompleter);
+                }
             }
-        }
+        });
     },
 
     destroy: function() {
-        this._view.destroy();
-        this._runCompleter.destroy();
-        this._emacsManager.destroy();
+        if (this._view)
+            this._view.destroy();
+
+        if (this._runCompleter)
+            this._runCompleter.destroy();
+
+        if (this._emacsManager)
+            this._emacsManager.destroy();
     }
 });
 
