@@ -36,8 +36,6 @@ const ServerIface = <interface name="com.localvoid.EmacsManager.Server">
 </interface>;
 
 
-const DBusProxy = Gio.DBusProxy.makeProxyWrapper(DBusIface);
-const GnomeShellProxy = Gio.DBusProxy.makeProxyWrapper(GnomeShellIface);
 const EmacsManagerProxy = Gio.DBusProxy.makeProxyWrapper(EmacsManagerIface);
 const ServerProxy = Gio.DBusProxy.makeProxyWrapper(ServerIface);
 
