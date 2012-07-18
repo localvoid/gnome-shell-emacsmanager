@@ -10,21 +10,6 @@ const Autocomplete = Me.imports.autocomplete;
 
 const EMACS_DIR = GLib.build_filenamev([GLib.get_home_dir(), '.emacs.d']);
 const EMACS_DESKTOP_DIR = GLib.build_filenamev([EMACS_DIR, 'desktop']);
-const UUID = Me.uuid;
-
-const DBusIface = <interface name="org.freedesktop.DBus">
-  <method name="StartServiceByName">
-    <arg type="s" direction="in"/>
-    <arg type="u" direction="in"/>
-    <arg type="u" direction="out"/>
-  </method>
-</interface>
-
-const GnomeShellIface = <interface name="org.gnome.Shell">
-  <method name="DisableExtension">
-    <arg type="s" direction="in"/>
-  </method>
-</interface>;
 
 const EmacsManagerIface = <interface name="com.localvoid.EmacsManager">
   <method name="StartServer">
@@ -147,35 +132,34 @@ const Extension = new Lang.Class({
     Name: 'EmacsManager.Extension',
 
     _init: function() {
-        let dbus = new DBusProxy(Gio.DBus.session,
-                                 'org.freedesktop.DBus',
-                                 '/org/freedesktop/DBus');
+        this._appeared = false;
+        this._watcherId = Gio.bus_watch_name(Gio.BusType.SESSION,
+                                             'com.localvoid.EmacsManager',
+                                             Gio.BusNameWatcherFlags.AUTO_START,
+                                             this._onAppeared.bind(this),
+                                             this._onVanished.bind(this));
+    },
 
-        dbus.StartServiceByNameRemote('com.localvoid.EmacsManager', 0, function(result, error) {
-            if (error) {
-                let shellProxy = new GnomeShellProxy(Gio.DBus.session,
-                                                     'org.gnome.Shell',
-                                                     '/org/gnome/Shell');
-                shellProxy.DisableExtensionSync(UUID);
-            } else {
-                if (result) {
-                    this._emacsManager = new EmacsManager();
-                    this._runCompleter = new Autocomplete.RunCompleter(EMACS_DESKTOP_DIR);
-                    this._view = new Views.View(this._emacsManager, this._runCompleter);
-                }
-            }
-        });
+    _onAppeared: function() {
+        if (!this._appeared) {
+            this._appeared = true;
+            this._emacsManager = new EmacsManager();
+            this._runCompleter = new Autocomplete.RunCompleter(EMACS_DESKTOP_DIR);
+            this._view = new Views.View(this._emacsManager, this._runCompleter);
+        }
+    },
+    _onVanished: function() {
+        if (this._appeared) {
+            this._appeared = false;
+            this._view.destroy();
+            this._runCompleter.destroy();
+            this._emacsManager.destroy();
+        }
     },
 
     destroy: function() {
-        if (this._view)
-            this._view.destroy();
-
-        if (this._runCompleter)
-            this._runCompleter.destroy();
-
-        if (this._emacsManager)
-            this._emacsManager.destroy();
+        Gio.bus_unwatch_name(this._watcherId);
+        this._onVanished();
     }
 });
 
