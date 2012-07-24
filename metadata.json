@@ -5,8 +5,5 @@
     "description": "Shows all running emacs servers and allows connecting to them.",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
-    "shell-version": [
-        "3.4.1",
-        "3.4.2"
-        ]
+    "shell-version": ["3.4"]
 }
