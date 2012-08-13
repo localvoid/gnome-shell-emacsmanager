@@ -53,3 +53,14 @@ and add this to your init.el file::
             desktop-load-locked-desktop t)
       (desktop-save-mode 1))
 
+Graceful Shutdown
+-----------------
+
+To gracefuly kill emacs servers on shutdown you need to install
+`Emacs Session Manager <https://github.com/localvoid/el-session-manager>`_
+
+
+Bugs
+----
+
+- socket files in /tmp/emacsXXXX after shutdown (see Graceful Shutdown)
