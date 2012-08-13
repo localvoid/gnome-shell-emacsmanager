@@ -62,7 +62,7 @@ and add this to your init.el file::
             desktop-path                (list desktop-dirname)
             desktop-save                t
             desktop-files-not-to-save   "^$" ;reload tramp paths
-            desktop-load-locked-desktop nil)
+            desktop-load-locked-desktop t)
       (desktop-save-mode 1))
 
 DBus API
