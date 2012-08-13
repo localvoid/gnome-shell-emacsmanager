@@ -2,9 +2,15 @@
  Emacs Manager extension
 =========================
 
-Gnome shell extension for working with local emacs servers.
-
 https://extensions.gnome.org/extension/361/emacs-manager/
+
+Installation
+------------
+
+This extension depends on `Emacs Manager <https://github.com/localvoid/emacs-manager>`_
+server. Install server before activating extension.
+
+Emacs Manager server is automaticaly launching via dbus activation.
 
 Virtual Environment hooks
 -------------------------
