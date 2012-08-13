@@ -65,3 +65,30 @@ and add this to your init.el file::
             desktop-load-locked-desktop nil)
       (desktop-save-mode 1))
 
+DBus API
+--------
+
+com.localvoid.EmacsManager
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Methods:
+
+- ObjectPath[] GetServers()
+- int StartServer(string name)
+
+Signals:
+
+- ServerCreated(ObjectPath server_id)
+- ServerDeleted(ObjectPath server_id)
+
+com.localvoid.EmacsManager.Server
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Properties:
+
+- string Name
+- string State {"RUNNING", "KILLING", "ERROR"}
+
+Methods:
+
+- void Kill()
+- void StartClient()
+- void Execute(string cmd)
