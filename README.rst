@@ -59,6 +59,11 @@ Graceful Shutdown
 To gracefuly kill emacs servers on shutdown you need to install
 `Emacs Session Manager <https://github.com/localvoid/el-session-manager>`_
 
+::
+
+    (when (daemonp)
+      (require 'session-manager)
+      (session-manager-init (daemonp)))
 
 Bugs
 ----
