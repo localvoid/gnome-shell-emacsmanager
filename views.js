@@ -166,8 +166,7 @@ const ServerView = new Lang.Class({
 
         let killButton = new St.Button({
             child: new St.Icon({
-                icon_name: 'window-close',
-                icon_type: St.IconType.SYMBOLIC,
+                icon_name: 'window-close-symbolic',
                 icon_size: 16,
                 style_class: 'emacs-manager-menu-item-kill-server-icon'
             })
@@ -209,11 +208,6 @@ const ServerListView = new Lang.Class({
                              this._onServerCreated.bind(this));
         emacsManager.connect('server-deleted',
                              this._onServerDeleted.bind(this));
-
-        for (let name in emacsManager.servers) {
-            let srv = emacsManager.servers[name];
-            this._createServerView(srv);
-        }
     },
 
     _createServerView: function(srv) {
@@ -266,7 +260,7 @@ const StatusButton = new Lang.Class({
     Extends: PanelMenu.SystemStatusButton,
 
     _init: function(mainView, emacsManager) {
-        this.parent('accessories-text-editor');
+        this.parent('accessories-text-editor-symbolic');
 
         this._serverListView = new ServerListView(emacsManager);
         this._menuView = new MenuView(mainView);

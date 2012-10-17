@@ -92,10 +92,17 @@ const EmacsManager = new Lang.Class({
                                   this._onServerDeleted.bind(this),
                                   'com.localvoid.EmacsManager');
 
-        let [servers, error] = this._proxy.GetServersSync();
-        servers.forEach(function(s) {
-            this.servers[s] = new Server(s);
-        }, this);
+        this._proxy.GetServersRemote(this._onGetServers.bind(this));
+    },
+
+    _onGetServers: function([servers], error) {
+        if (servers) {
+            servers.forEach(function(s) {
+                let srv = new Server(s);
+                this.servers[s] = srv;
+                this.emit('server-created', srv);
+            }, this);
+        }
     },
 
     _onServerCreated: function(object, senderName, [object_path]) {
@@ -130,12 +137,19 @@ const Extension = new Lang.Class({
     Name: 'EmacsManager.Extension',
 
     _init: function() {
+    },
+
+    enable: function() {
         this._appeared = false;
         this._watcherId = Gio.bus_watch_name(Gio.BusType.SESSION,
                                              'com.localvoid.EmacsManager',
                                              Gio.BusNameWatcherFlags.AUTO_START,
                                              this._onAppeared.bind(this),
                                              this._onVanished.bind(this));
+    },
+    disable: function() {
+        Gio.bus_unwatch_name(this._watcherId);
+        this._onVanished();
     },
 
     _onAppeared: function() {
@@ -153,25 +167,9 @@ const Extension = new Lang.Class({
             this._runCompleter.destroy();
             this._emacsManager.destroy();
         }
-    },
-
-    destroy: function() {
-        Gio.bus_unwatch_name(this._watcherId);
-        this._onVanished();
     }
 });
 
-
-let ext;
-
-function enable() {
-    ext = new Extension();
-}
-
-function disable() {
-    ext.destroy();
-    ext = undefined;
-}
-
-function init() {
+function init(metadata) {
+    return new Extension();
 }

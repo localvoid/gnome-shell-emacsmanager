@@ -5,5 +5,5 @@
     "description": "User Interface for Emacs Manager server.\nRead installation details at homepage before activating this extension.",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
-    "shell-version": ["3.4"]
+    "shell-version": ["3.6"]
 }
