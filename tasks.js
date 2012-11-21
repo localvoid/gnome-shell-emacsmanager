@@ -16,9 +16,12 @@ function _run(argv) {
                              null,
                              GLib.SpawnFlags.SEARCH_PATH | GLib.SpawnFlags.DO_NOT_REAP_CHILD,
                              null);
+
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, function () {}, null);
     } catch (e) {
         logError(e, 'failed to run ' + argv);
     }
+
 }
 
 function startServer(name) {
