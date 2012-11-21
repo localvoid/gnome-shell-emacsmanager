@@ -4,14 +4,6 @@
 
 https://extensions.gnome.org/extension/361/emacs-manager/
 
-Installation
-------------
-
-This extension depends on `Emacs Manager <https://github.com/localvoid/emacs-manager>`_
-server. Install server before activating extension.
-
-Emacs Manager server is automaticaly launching via dbus activation.
-
 Virtual Environment hooks
 -------------------------
 You can automaticaly initialize your virtual environment when starting
@@ -64,8 +56,3 @@ To gracefuly kill emacs servers on shutdown you need to install
     (when (daemonp)
       (require 'session-manager)
       (session-manager-init (daemonp)))
-
-Bugs
-----
-
-- socket files in /tmp/emacsXXXX after shutdown (see Graceful Shutdown)

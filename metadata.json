@@ -2,7 +2,7 @@
     "extension-id": "emacs-manager",
     "uuid": "emacsmanager@localvoid.gmail.com",
     "name": "Emacs Manager",
-    "description": "User Interface for Emacs Manager server.\nRead installation details at homepage before activating this extension.",
+    "description": "Emacs Manager.",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
     "shell-version": ["3.6"]

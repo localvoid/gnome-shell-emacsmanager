@@ -1,80 +1,38 @@
-const Signals = imports.signals;
-const Lang = imports.lang;
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
+// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
+const Lang = imports.lang
+    , Signals = imports.signals
 
-const DirectoryMonitor = new Lang.Class({
-    Name: 'EmacsManager.DirectoryMonitor',
+    , GLib = imports.gi.GLib
+    , Gio = imports.gi.Gio
 
-    _init: function(path) {
-        this.path = path
-    },
+    , ExtUtils = imports.misc.extensionUtils
+    , Ext = ExtUtils.getCurrentExtension()
+    , Settings = Ext.imports.settings
+    , Utils = Ext.imports.utils
+    , Monitor = Ext.imports.monitor;
 
-    enable: function() {
-        if (this._monitor === undefined) {
-            this._file = Gio.file_new_for_path(this.path);
-            try {
-                this._monitor = this._file.monitor_directory(Gio.FileMonitorFlags.NONE,
-                                                             null);
-                this._monitor.connect('changed', Lang.bind(this, this._onChanged));
-            } catch (e) {
-                log('DirectoryMonitor error');
-            }
-        }
-    },
 
-    disable: function() {
-        if (this._monitor !== undefined) {
-            this._monitor.cancel();
-            this._monitor = undefined;
-        }
-    },
-
-    _onChanged: function(monitor, file, other_file, event_type) {
-        switch (event_type) {
-        case Gio.FileMonitorEvent.CREATED:
-            this.emit('created', file);
-            break;
-        case Gio.FileMonitorEvent.DELETED:
-            this.emit('deleted', file);
-            break;
-        }
-    },
-
-});
-Signals.addSignalMethods(DirectoryMonitor.prototype);
+const DESKTOP_FILENAME_REGEXP = /^([^\.]+)\.desktop$/;
 
 const RunCompleter = new Lang.Class({
     Name: 'EmacsManager.RunCompleter',
 
-    _init: function(path) {
-        this._path = path;
-        this._re = new RegExp('([^\\.]+)\\.desktop');
+    _init: function() {
         this._desktops = [];
 
-        let m = this._monitor = new DirectoryMonitor(path);
-        m.connect('created',
-                  this._onFileCreated.bind(this));
-        m.connect('deleted',
-                  this._onFileDeleted.bind(this));
+        Utils.eachFile(Settings.EMACS_DESKTOP_DIR, function(f) {
+            let name = f.get_name()
+              , match = DESKTOP_FILENAME_REGEXP.exec(name);
+
+            if (match)
+                this._desktops.push(match[1]);
+        }, this);
+
+        let m = this._monitor = new Monitor.DirectoryMonitor(Settings.EMACS_DESKTOP_DIR);
+        m.connect('created', this._onFileCreated.bind(this));
+        m.connect('deleted', this._onFileDeleted.bind(this));
+
         m.enable();
-        this._initFiles();
-    },
-
-    _initFiles: function() {
-        let file = Gio.file_new_for_path(this._path);
-        if (file.query_exists(null)) {
-            let enumerator = file.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
-            let fileInfo;
-            while ((fileInfo = enumerator.next_file(null)) != null) {
-                let name = fileInfo.get_name();
-                let match = this._re.exec(name);
-
-                if (match) {
-                    this._desktops.push(match[1]);
-                }
-            }
-        }
     },
 
     destroy: function() {
@@ -82,12 +40,11 @@ const RunCompleter = new Lang.Class({
     },
 
     _onFileCreated: function(source, info) {
-        let name = info.get_basename();
-        let match = this._re.exec(name);
+        let name = info.get_basename()
+          , match = DESKTOP_FILENAME_REGEXP.exec(name);
 
-        if (match) {
+        if (match)
             this._desktops.push(match[1]);
-        }
     },
 
     _onFileDeleted: function(source, info) {
@@ -95,15 +52,15 @@ const RunCompleter = new Lang.Class({
     },
 
     getCompletion: function(text) {
-        let common = '';
-        let notInit = true;
-        let items = this._desktops;
-        let itemsLen = items.length;
+        let common = ''
+          , notInit = true
+          , items = this._desktops
+          , itemsLen = items.length;
 
         for (let i = 0; i < itemsLen; i++) {
-            if (items[i].indexOf(text) != 0) {
+            if (items[i].indexOf(text) != 0)
                 continue;
-            }
+
             if (notInit) {
                 common = items[i];
                 notInit = false;
@@ -116,9 +73,9 @@ const RunCompleter = new Lang.Class({
     },
 
     _getCommon: function(s1, s2) {
-        let k = 0;
-        let s1Len = s1.length;
-        let s2Len = s2.length;
+        let k = 0
+          , s1Len = s1.length
+          , s2Len = s2.length
 
         for (; k < s1Len && k < s2Len; k++) {
             if (s1[k] != s2[k])

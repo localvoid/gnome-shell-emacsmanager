@@ -1,13 +1,17 @@
-const Signals = imports.signals;
-const Lang = imports.lang;
-const Tweener = imports.ui.tweener;
-const PanelMenu = imports.ui.panelMenu;
-const ModalDialog = imports.ui.modalDialog;
-const PopupMenu = imports.ui.popupMenu;
-const Main = imports.ui.main;
-const Pango = imports.gi.Pango;
-const St = imports.gi.St;
-const Clutter = imports.gi.Clutter;
+// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
+const Lang = imports.lang
+    , Signals = imports.signals
+
+    , Pango = imports.gi.Pango
+    , Clutter = imports.gi.Clutter
+    , St = imports.gi.St
+
+    , Tweener = imports.ui.tweener
+    , PanelMenu = imports.ui.panelMenu
+    , ModalDialog = imports.ui.modalDialog
+    , PopupMenu = imports.ui.popupMenu
+    , Main = imports.ui.main;
+
 
 const DIALOG_GROW_TIME = 0.1;
 
@@ -104,7 +108,7 @@ const RunDialog = new Lang.Class({
         this._commandError = false;
 
         if (input) {
-            try{
+            try {
                 this._emacsManager.startServer(input);
             } catch (e) {
                 this._showError(e.message);
@@ -146,6 +150,32 @@ const RunDialog = new Lang.Class({
     }
 });
 
+const RemoteServerView = new Lang.Class({
+    Name: 'EmacsManager.RemoteServerView',
+    Extends: PopupMenu.PopupBaseMenuItem,
+
+    _init: function(server) {
+        this.parent();
+
+        this.server = server;
+
+        this.addActor(new St.Label({
+            text: server.name,
+            style_class: 'emacs-manager_remote-server-name'
+        }), { expand: true });
+
+        this.addActor(new St.Label({
+            text: server.host,
+            style_class: 'emacs-manager_remote-server-host'
+        }));
+
+        this.connect('activate', this._onActivate.bind(this));
+    },
+
+    _onActivate: function(e, c) {
+        this.server.startClient();
+    }
+});
 
 const ServerView = new Lang.Class({
     Name: 'EmacsManager.ServerView',
@@ -155,11 +185,12 @@ const ServerView = new Lang.Class({
         this.parent();
 
         this.server = server;
-        server.connect('changed', this._onChanged.bind(this));
+        server.connect('state-changed', this._onStateChanged.bind(this));
+        this._syncState();
 
         let nameLabel = new St.Label({
             text: server.name,
-            style_class: 'emacs-manager-menu-item-name'
+            style_class: 'emacs-manager_server-name'
         });
 
         this.addActor(nameLabel, { expand: true });
@@ -168,7 +199,7 @@ const ServerView = new Lang.Class({
             child: new St.Icon({
                 icon_name: 'window-close-symbolic',
                 icon_size: 16,
-                style_class: 'emacs-manager-menu-item-kill-server-icon'
+                style_class: 'emacs-manager_kill-server-icon'
             })
         });
         killButton.connect('clicked', this._onKill.bind(this));
@@ -181,16 +212,63 @@ const ServerView = new Lang.Class({
         this.server.kill();
     },
 
-    _onChanged: function() {
-        if (this.server.state == 'RUNNING') {
+    _syncState: function() {
+        if (this.server.state === 'RUNNING')
             this.setSensitive(true);
-        } else {
+        else
             this.setSensitive(false);
-        }
+    },
+
+    _onStateChanged: function(source, state) {
+        this._syncState();
     },
 
     _onActivate: function(e, c) {
         this.server.startClient();
+    }
+});
+
+const RemoteServerListView = new Lang.Class({
+    Name: 'EmacsManager.RemoteServerListView',
+    Extends: PopupMenu.PopupMenuSection,
+
+    _init: function(emacsManager) {
+        this.parent();
+
+        this.serverCount = 0;
+        this._serverViews = {};
+
+        emacsManager.connect('remote-server-created',
+                             this._onServerCreated.bind(this));
+        emacsManager.connect('remote-server-deleted',
+                             this._onServerDeleted.bind(this));
+
+        let servers = emacsManager._remoteServers;
+        for (let name in servers) {
+            let s = servers[name];
+            this._createServer(s);
+        }
+    },
+
+    _createServer: function(srv) {
+        this.serverCount += 1;
+        let v = new RemoteServerView(srv);
+        this._serverViews[srv.name] = v;
+        this.addMenuItem(v);
+        if (this.serverCount === 1)
+            this.emit('empty', false);
+    },
+
+    _onServerCreated: function(source, srv) {
+        this._createServer(srv);
+    },
+
+    _onServerDeleted: function(source, srv) {
+        this.serverCount -= 1;
+        this._serverViews[srv.name].destroy();
+        delete this._serverViews[srv];
+        if (this.serverCount === 0)
+            this.emit('empty', true);
     }
 });
 
@@ -208,33 +286,33 @@ const ServerListView = new Lang.Class({
                              this._onServerCreated.bind(this));
         emacsManager.connect('server-deleted',
                              this._onServerDeleted.bind(this));
+
+        let servers = emacsManager._servers;
+        for (let name in servers) {
+            let s = servers[name];
+            this._createServer(s);
+        }
     },
 
-    _createServerView: function(srv) {
+    _createServer: function(srv) {
         this.serverCount += 1;
         let v = new ServerView(srv);
         this._serverViews[srv.name] = v;
         this.addMenuItem(v);
-        if (this.serverCount === 1) {
+        if (this.serverCount === 1)
             this.emit('empty', false);
-        }
-    },
-
-    _deleteServerView: function(srv) {
-        this.serverCount -= 1;
-        this._serverViews[srv.name].destroy();
-        delete this._serverViews[srv];
-        if (this.serverCount === 0) {
-            this.emit('empty', true);
-        }
     },
 
     _onServerCreated: function(source, srv) {
-        this._createServerView(srv);
+        this._createServer(srv);
     },
 
     _onServerDeleted: function(source, srv) {
-        this._deleteServerView(srv);
+        this.serverCount -= 1;
+        this._serverViews[srv.name].destroy();
+        delete this._serverViews[srv];
+        if (this.serverCount === 0)
+            this.emit('empty', true);
     }
 });
 
@@ -263,27 +341,39 @@ const StatusButton = new Lang.Class({
         this.parent('accessories-text-editor-symbolic');
 
         this._serverListView = new ServerListView(emacsManager);
+        this._remoteServerListView = new RemoteServerListView(emacsManager);
         this._menuView = new MenuView(mainView);
+        this._separator = null;
 
         this._serverListView.connect('empty', this._onEmpty.bind(this));
+        this._remoteServerListView.connect('empty', this._onEmpty.bind(this));
 
         this.menu.addMenuItem(this._serverListView);
-        if (this._serverListView.serverCount > 0) {
-            this._separator = new PopupMenu.PopupSeparatorMenuItem();
-            this.menu.addMenuItem(this._separator, 1);
-        }
+        this.menu.addMenuItem(this._remoteServerListView);
+
+        this._syncEmpty();
+
         this.menu.addMenuItem(this._menuView);
     },
 
-    _onEmpty: function(source, isEmpty) {
-        if (isEmpty) {
+    _syncEmpty: function() {
+        if (this._serverListView.serverCount > 0 ||
+            this._remoteServerListView.serverCount > 0) {
+            if (!this._separator) {
+                this._separator = new PopupMenu.PopupSeparatorMenuItem();
+                this.menu.addMenuItem(this._separator, 2);
+            }
+        } else if (this._serverListView.serverCount === 0 &&
+                   this._remoteServerListView.serverCount === 0) {
             if (this._separator) {
                 this._separator.destroy();
+                this._separator = null;
             }
-        } else {
-            this._separator = new PopupMenu.PopupSeparatorMenuItem();
-            this.menu.addMenuItem(this._separator, 1);
         }
+    },
+
+    _onEmpty: function(source, isEmpty) {
+        this._syncEmpty();
     }
 });
 
