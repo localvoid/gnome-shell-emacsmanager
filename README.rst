@@ -56,3 +56,11 @@ To gracefuly kill emacs servers on shutdown you need to install
     (when (daemonp)
       (require 'session-manager)
       (session-manager-init (daemonp)))
+
+Debugging
+---------
+
+If there are problems with launching or killing emacs servers, you can look at
+output of commands at::
+
+    ~/.cache/gdm/session.log
