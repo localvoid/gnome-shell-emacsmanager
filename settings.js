@@ -4,8 +4,8 @@ const GLib = imports.gi.GLib;
 let UID;
 
 (function() {
-  let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null);
-  UID = (''+ret[1]).replace(/\s+$/, '');
+    let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null);
+    UID = new String(ret[1]).trim();
 }());
 
 const EMACS_DIR = GLib.build_filenamev([GLib.get_home_dir(), '.emacs.d'])
