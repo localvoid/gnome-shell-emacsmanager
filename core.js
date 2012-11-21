@@ -77,6 +77,7 @@ const EmacsManager = new Lang.Class({
         this._remoteServers = {};
 
         let m = this._socketsMonitor = new Monitor.DirectoryMonitor(Settings.EMACS_SOCKETS_DIR);
+        m.connect('directory-created', this._syncLocalServers.bind(this));
         m.connect('created', this._onSocketFileCreated.bind(this));
         m.connect('deleted', this._onSocketFileDeleted.bind(this));
         m.enable();
@@ -86,16 +87,20 @@ const EmacsManager = new Lang.Class({
         m.connect('deleted', this._onRemoteSocketFileDeleted.bind(this));
         m.enable();
 
-        Utils.eachFile(Settings.EMACS_SOCKETS_DIR, function(f) {
-            let name = f.get_name();
-            if (_isServerNameValid(name))
-                this._createServer(name);
-        }, this);
+        this._syncLocalServers();
 
         Utils.eachFile(Settings.EMACS_SERVERS_DIR, function(f) {
             let name = f.get_name();
             if (_isServerNameValid(name))
                 this._createRemoteServer(name);
+        }, this);
+    },
+
+    _syncLocalServers: function() {
+        Utils.eachFile(Settings.EMACS_SOCKETS_DIR, function(f) {
+            let name = f.get_name();
+            if (!this._servers[name] && _isServerNameValid(name))
+                this._createServer(name);
         }, this);
     },
 

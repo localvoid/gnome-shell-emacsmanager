@@ -9,32 +9,36 @@ const DirectoryMonitor = new Lang.Class({
 
     _init: function(path) {
         this.path = path
+        this._monitor = null;
     },
 
     enable: function() {
-        if (this._monitor === undefined) {
+        if (!this._monitor) {
             this._file = Gio.file_new_for_path(this.path);
             try {
                 this._monitor = this._file.monitor_directory(Gio.FileMonitorFlags.NONE,
                                                              null);
                 this._monitor.connect('changed', this._onChanged.bind(this));
             } catch (e) {
-                log('DirectoryMonitor error');
+                logError(e, 'failed to register file monitor');
             }
         }
     },
 
     disable: function() {
-        if (this._monitor !== undefined) {
+        if (this._monitor) {
             this._monitor.cancel();
-            this._monitor = undefined;
+            this._monitor = null;
         }
     },
 
-    _onChanged: function(monitor, file, other_file, event_type) {
-        switch (event_type) {
+    _onChanged: function(monitor, file, otherFile, eventType) {
+        switch (eventType) {
         case Gio.FileMonitorEvent.CREATED:
-            this.emit('created', file);
+            if (file.get_path() === this.path)
+                this.emit('directory-created');
+            else
+                this.emit('created', file);
             break;
         case Gio.FileMonitorEvent.DELETED:
             this.emit('deleted', file);
