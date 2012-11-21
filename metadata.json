@@ -2,7 +2,7 @@
     "extension-id": "emacs-manager",
     "uuid": "emacsmanager@localvoid.gmail.com",
     "name": "Emacs Manager",
-    "description": "Emacs Manager.",
+    "description": "Manage local/remote emacs servers.",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
     "shell-version": ["3.6"]
