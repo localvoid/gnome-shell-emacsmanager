@@ -9,8 +9,8 @@ Virtual Environment hooks
 You can automaticaly initialize your virtual environment when starting
 emacs servers.
 
-Create file my-venv.sh in Virtual Environment Directory (default:
-~/.emacs.d/virtualenv) with initialization of your environment::
+Create file my-venv.sh in Virtual Environment Directory (~/.emacs.d/virtualenv)
+with initialization of your environment::
 
     . ~/my-venv/bin/activate
     export EXAMPLE_ENVIRONMENT_VAR=1
