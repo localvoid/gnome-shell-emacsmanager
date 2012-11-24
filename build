@@ -1,0 +1,16 @@
+#!/bin/bash
+
+files=(
+    autocomplete.js
+    core.js
+    extension.js
+    metadata.json
+    monitor.js
+    settings.js
+    stylesheet.css
+    tasks.js
+    utils.js
+    views.js
+)
+
+zip -j emacsmanager.zip ${files[*]}
