@@ -49,7 +49,7 @@ Graceful Shutdown
 -----------------
 
 To gracefuly kill emacs servers on shutdown you need to install
-`Emacs Session Manager <https://github.com/localvoid/el-session-manager>`_
+`Emacs Session Manager <http://marmalade-repo.org/packages/session-manager>`_
 
 ::
 
