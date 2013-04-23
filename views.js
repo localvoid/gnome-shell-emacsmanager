@@ -9,6 +9,7 @@ const Lang = imports.lang
     , Tweener = imports.ui.tweener
     , PanelMenu = imports.ui.panelMenu
     , ModalDialog = imports.ui.modalDialog
+    , ShellEntry = imports.ui.shellEntry
     , PopupMenu = imports.ui.popupMenu
     , Main = imports.ui.main;
 
@@ -28,11 +29,13 @@ const RunDialog = new Lang.Class({
 
         let label = new St.Label({
             style_class: 'run-dialog-label',
-            text: _("Please enter emacs server name:")
+            text: _("Enter emacs server name")
         });
         this.contentLayout.add(label, { y_align: St.Align.START });
 
-        let entry = new St.Entry({ style_class: 'run-dialog-entry' });
+        let entry = new St.Entry({ style_class: 'run-dialog-entry',
+                                   can_focus: true});
+        ShellEntry.addContextMenu(entry);
         entry.label_actor = label;
         this._entryText = entry.clutter_text;
         this.contentLayout.add(entry, { y_align: St.Align.START });
@@ -45,7 +48,7 @@ const RunDialog = new Lang.Class({
         this.contentLayout.add(this._errorBox, { expand: true });
 
         let errorIcon = new St.Icon({
-            icon_name: 'dialog-error',
+            icon_name: 'dialog-error-symbolic',
             icon_size: 24,
             style_class: 'run-dialog-error-icon'
         });
@@ -69,6 +72,10 @@ const RunDialog = new Lang.Class({
 
         this._entryText.connect('key-press-event',
                                 this._onKeyPress.bind(this));
+
+        this.setButtons([{ action: this.close.bind(this),
+                           label: _("Close"),
+                           key: Clutter.Escape }]);
     },
 
     _onKeyPress: function(o, e) {
