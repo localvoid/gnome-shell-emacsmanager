@@ -73,11 +73,11 @@ const RunCompleter = new Lang.Class({
     },
 
     _getCommon: function(s1, s2) {
-        let k = 0
-          , s1Len = s1.length
-          , s2Len = s2.length
+        if (s1 == null)
+            return s2;
 
-        for (; k < s1Len && k < s2Len; k++) {
+        let k = 0
+        for (; k < s1.length && k < s2.length; k++) {
             if (s1[k] != s2[k])
                 break;
         }

@@ -63,4 +63,4 @@ Debugging
 If there are problems with launching or killing emacs servers, you can look at
 output of commands at::
 
-    ~/.cache/gdm/session.log
+    journalctl _UID=`id -u`

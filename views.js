@@ -22,7 +22,8 @@ const RunDialog = new Lang.Class({
     Extends: ModalDialog.ModalDialog,
 
     _init: function(emacsManager, completer) {
-        this.parent({ styleClass: 'run-dialog' });
+        this.parent({ styleClass: 'run-dialog',
+                      destroyOnClose: false });
 
         this._emacsManager = emacsManager;
         this._completer = completer;
@@ -84,20 +85,19 @@ const RunDialog = new Lang.Class({
         if (sym == Clutter.Return || sym == Clutter.KP_Enter) {
             this.popModal();
             this._run(o.get_text());
-            if (!this._commandError) {
+            if (!this._commandError || !thus.pushModal()) {
                 this.close();
-            } else {
-                if (!this.pushModal())
-                    this.close();
             }
             return true;
-        } else if (sym == Clutter.Escape) {
-            this.close();
-            return true;
         } else if (sym == Clutter.Tab) {
-            let text = o.get_text(),
-                postfix = this._getCompletion(text);
+            let text = o.get_text();
+            let prefix;
+            if (text.lastIndexOf(' ') == -1)
+                prefix = text;
+            else
+                prefix = text.substr(text.lastIndexOf(' ') + 1);
 
+            let postfix = this._getCompletion(prefix);
             if (postfix != null && postfix.length > 0) {
                 o.insert_text(postfix, -1);
                 o.set_cursor_position(text.length + postfix.length);
@@ -149,11 +149,6 @@ const RunDialog = new Lang.Class({
         this._entryText.set_text('');
         this._commandError = false;
         this.parent();
-    },
-
-    destroy: function() {
-        this._completer.destroy();
-        this.parent();
     }
 });
 
@@ -166,12 +161,12 @@ const RemoteServerView = new Lang.Class({
 
         this.server = server;
 
-        this.addActor(new St.Label({
+        this.actor.add(new St.Label({
             text: server.name,
             style_class: 'emacs-manager_remote-server-name'
         }), { expand: true });
 
-        this.addActor(new St.Label({
+        this.actor.add(new St.Label({
             text: server.host,
             style_class: 'emacs-manager_remote-server-host'
         }));
@@ -200,7 +195,7 @@ const ServerView = new Lang.Class({
             style_class: 'emacs-manager_server-name'
         });
 
-        this.addActor(nameLabel, { expand: true });
+        this.actor.add(nameLabel, { expand: true });
 
         let killButton = new St.Button({
             child: new St.Icon({
@@ -210,7 +205,7 @@ const ServerView = new Lang.Class({
             })
         });
         killButton.connect('clicked', this._onKill.bind(this));
-        this.addActor(killButton, { span: -1, align: St.Align.END });
+        this.actor.add(killButton, { span: -1, align: St.Align.END });
 
         this.connect('activate', this._onActivate.bind(this));
     },
@@ -341,11 +336,19 @@ const MenuView = new Lang.Class({
 
 
 const StatusButton = new Lang.Class({
-    Name: 'EmacsManager.StatusButton',
-    Extends: PanelMenu.SystemStatusButton,
+    Name: 'EmacsManager.Button',
+    Extends: PanelMenu.Button,
 
     _init: function(mainView, emacsManager) {
-        this.parent('accessories-text-editor-symbolic');
+        this.parent(0.0, _("Emacs Manager"));
+
+        this._hbox = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
+        this._hbox.add_child(new St.Icon({ style_class: 'system-status-icon',
+                                           icon_name: 'accessories-text-editor-symbolic' }));
+        this._hbox.add_child(new St.Label({ text: '\u25BE',
+                                            y_expand: true,
+                                            y_align: Clutter.ActorAlign.CENTER }));
+        this.actor.add_child(this._hbox);
 
         this._serverListView = new ServerListView(emacsManager);
         this._remoteServerListView = new RemoteServerListView(emacsManager);
