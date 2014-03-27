@@ -5,5 +5,5 @@
     "description": "This extension allows you to run emacs servers and connect to them from the Gnome Shell.",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
-    "shell-version": ["3.10"]
+    "shell-version": ["3.12"]
 }
