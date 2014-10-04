@@ -31,10 +31,13 @@ const RunDialog = new Lang.Class({
             style_class: 'run-dialog-label',
             text: _('Enter emacs server name')
         });
-        this.contentLayout.add(label, { y_align: St.Align.START });
+
+        this.contentLayout.add(label, { x_fill: false,
+                                        x_align: St.Align.START,
+                                        y_align: St.Align.START });
 
         let entry = new St.Entry({ style_class: 'run-dialog-entry',
-                                   can_focus: true});
+                                   can_focus: true });
         ShellEntry.addContextMenu(entry);
         entry.label_actor = label;
         this._entryText = entry.clutter_text;
@@ -64,8 +67,10 @@ const RunDialog = new Lang.Class({
 
         this._errorBox.add(this._errorMessage, {
             expand: true,
+            x_align: St.Align.START,
+            x_fill: false,
             y_align: St.Align.MIDDLE,
-            y_fill: false
+            y_fill: false,
         });
 
         this._errorBox.hide();
@@ -74,25 +79,25 @@ const RunDialog = new Lang.Class({
                                 this._onKeyPress.bind(this));
 
         this.setButtons([{ action: this.close.bind(this),
-                           label: _("Close"),
+                           label: _('Close'),
                            key: Clutter.Escape }]);
     },
 
     _onKeyPress: function(o, e) {
-        let sym = e.get_key_symbol();
+        let symbol = e.get_key_symbol();
 
-        if (sym == Clutter.Return || sym == Clutter.KP_Enter) {
+        if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
             this.popModal();
             this._run(o.get_text());
             if (!this._commandError || !thus.pushModal()) {
                 this.close();
             }
-            return true;
+            return Clutter.EVENT_STOP;
         } else if (sym == Clutter.Tab) {
             let text = o.get_text();
             let prefix;
 
-            if (text.lastIndexOf(' ') == -1) {
+            if (text.lastIndexOf(' ') === -1) {
                 prefix = text;
             } else {
                 prefix = text.substr(text.lastIndexOf(' ') + 1);
@@ -103,9 +108,9 @@ const RunDialog = new Lang.Class({
                 o.insert_text(postfix, -1);
                 o.set_cursor_position(text.length + postfix.length);
             }
-            return true;
+            return Clutter.EVENT_STOP;
         }
-        return false;
+        return Clutter.EVENT_PROPAGATE;
     },
 
     _getCompletion: function(text) {
