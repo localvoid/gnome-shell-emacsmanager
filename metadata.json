@@ -2,8 +2,8 @@
     "extension-id": "emacs-manager",
     "uuid": "emacsmanager@localvoid.gmail.com",
     "name": "Emacs Manager",
-    "description": "This extension allows you to run emacs servers and connect to them from the Gnome Shell.",
+    "description": "Manage local emacs server instances from status bar",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
-    "shell-version": ["3.12"]
+    "shell-version": ["3.14"]
 }
