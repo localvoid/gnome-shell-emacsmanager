@@ -1,12 +1,11 @@
-// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
-const Lang = imports.lang
+const Lang = imports.lang;
 
-    , ExtUtils = imports.misc.extensionUtils
-    , Ext = ExtUtils.getCurrentExtension()
+const ExtUtils = imports.misc.extensionUtils;
+const Ext = ExtUtils.getCurrentExtension();
 
-    , Core = Ext.imports.core
-    , Autocomplete = Ext.imports.autocomplete
-    , Views = Ext.imports.views;
+const Core = Ext.imports.core;
+const Autocomplete = Ext.imports.autocomplete;
+const Views = Ext.imports.views;
 
 const Extension = new Lang.Class({
     Name: 'EmacsManager.Extension',
@@ -17,14 +16,17 @@ const Extension = new Lang.Class({
             this._runCompleter = new Autocomplete.RunCompleter();
             this._view = new Views.View(this._emacsManager, this._runCompleter);
         } catch (e) {
-            if (this._runCompleter)
+            if (this._runCompleter) {
                 this._runCompleter.destroy();
-            if (this._emacsManager)
+            }
+            if (this._emacsManager) {
                 this._emacsManager.destroy();
+            }
 
             this._emacsManager = null;
             this._runCompleter = null;
             this._view = null;
+
             throw e;
         }
     },

@@ -1,14 +1,12 @@
-// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
-const Gio = imports.gi.Gio
-    , Signals = imports.signals
-    , Lang = imports.lang;
-
+const Gio = imports.gi.Gio;
+const Signals = imports.signals;
+const Lang = imports.lang;
 
 const DirectoryMonitor = new Lang.Class({
     Name: 'EmacsManager.DirectoryMonitor',
 
     _init: function(path) {
-        this.path = path
+        this.path = path;
         this._monitor = null;
     },
 
@@ -16,8 +14,8 @@ const DirectoryMonitor = new Lang.Class({
         if (!this._monitor) {
             this._file = Gio.file_new_for_path(this.path);
             try {
-                this._monitor = this._file.monitor_directory(Gio.FileMonitorFlags.NONE,
-                                                             null);
+                this._monitor = this._file.monitor_directory(
+                  Gio.FileMonitorFlags.NONE, null);
                 this._monitor.connect('changed', this._onChanged.bind(this));
             } catch (e) {
                 logError(e, 'failed to register file monitor');
@@ -46,4 +44,5 @@ const DirectoryMonitor = new Lang.Class({
         }
     }
 });
+
 Signals.addSignalMethods(DirectoryMonitor.prototype);

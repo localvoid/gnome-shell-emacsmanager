@@ -1,17 +1,16 @@
-// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
-const Lang = imports.lang
-    , Signals = imports.signals
+const Lang = imports.lang;
+const Signals = imports.signals;
 
-    , Pango = imports.gi.Pango
-    , Clutter = imports.gi.Clutter
-    , St = imports.gi.St
+const Pango = imports.gi.Pango;
+const Clutter = imports.gi.Clutter;
+const St = imports.gi.St;
 
-    , Tweener = imports.ui.tweener
-    , PanelMenu = imports.ui.panelMenu
-    , ModalDialog = imports.ui.modalDialog
-    , ShellEntry = imports.ui.shellEntry
-    , PopupMenu = imports.ui.popupMenu
-    , Main = imports.ui.main;
+const Tweener = imports.ui.tweener;
+const PanelMenu = imports.ui.panelMenu;
+const ModalDialog = imports.ui.modalDialog;
+const ShellEntry = imports.ui.shellEntry;
+const PopupMenu = imports.ui.popupMenu;
+const Main = imports.ui.main;
 
 
 const DIALOG_GROW_TIME = 0.1;
@@ -30,7 +29,7 @@ const RunDialog = new Lang.Class({
 
         let label = new St.Label({
             style_class: 'run-dialog-label',
-            text: _("Enter emacs server name")
+            text: _('Enter emacs server name')
         });
         this.contentLayout.add(label, { y_align: St.Align.START });
 
@@ -92,13 +91,15 @@ const RunDialog = new Lang.Class({
         } else if (sym == Clutter.Tab) {
             let text = o.get_text();
             let prefix;
-            if (text.lastIndexOf(' ') == -1)
+
+            if (text.lastIndexOf(' ') == -1) {
                 prefix = text;
-            else
+            } else {
                 prefix = text.substr(text.lastIndexOf(' ') + 1);
+            }
 
             let postfix = this._getCompletion(prefix);
-            if (postfix != null && postfix.length > 0) {
+            if (postfix !== null && postfix.length > 0) {
                 o.insert_text(postfix, -1);
                 o.set_cursor_position(text.length + postfix.length);
             }
@@ -128,7 +129,8 @@ const RunDialog = new Lang.Class({
         this._errorMessage.set_text(message);
 
         if (!this._errorBox.visible) {
-            let [errorBoxMinHeight, errorBoxNaturalHeight] = this._errorBox.get_preferred_height(-1);
+            let [errorBoxMinHeight, errorBoxNaturalHeight]
+                    = this._errorBox.get_preferred_height(-1);
 
             let parentActor = this._errorBox.get_parent();
             Tweener.addTween(parentActor, {
@@ -340,7 +342,7 @@ const StatusButton = new Lang.Class({
     Extends: PanelMenu.Button,
 
     _init: function(mainView, emacsManager) {
-        this.parent(0.0, _("Emacs Manager"));
+        this.parent(0.0, _('Emacs Manager'));
 
         this._hbox = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
         this._hbox.add_child(new St.Icon({ style_class: 'system-status-icon',
@@ -394,7 +396,7 @@ const View = new Lang.Class({
         this._runDialog = new RunDialog(emacsManager, runCompleter);
         this._statusButton = new StatusButton(this, emacsManager);
 
-        Main.panel.addToStatusArea('emacs-manager', this._statusButton)
+        Main.panel.addToStatusArea('emacs-manager', this._statusButton);
     },
 
     popupStartServerDialog: function() {

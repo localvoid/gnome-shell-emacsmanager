@@ -1,15 +1,14 @@
-// -*- mode: js; flymake-mode: -1; js-indent-level: 4; indent-tabs-mode: nil -*-
-const Lang = imports.lang
-    , Signals = imports.signals
+const Lang = imports.lang;
+const Signals = imports.signals;
 
-    , GLib = imports.gi.GLib
-    , Gio = imports.gi.Gio
+const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
 
-    , ExtUtils = imports.misc.extensionUtils
-    , Ext = ExtUtils.getCurrentExtension()
-    , Settings = Ext.imports.settings
-    , Utils = Ext.imports.utils
-    , Monitor = Ext.imports.monitor;
+const ExtUtils = imports.misc.extensionUtils;
+const Ext = ExtUtils.getCurrentExtension();
+const Settings = Ext.imports.settings;
+const Utils = Ext.imports.utils;
+const Monitor = Ext.imports.monitor;
 
 
 const DESKTOP_FILENAME_REGEXP = /^([^\.]+)\.desktop$/;
@@ -21,14 +20,16 @@ const RunCompleter = new Lang.Class({
         this._desktops = [];
 
         Utils.eachFile(Settings.EMACS_DESKTOP_DIR, function(f) {
-            let name = f.get_name()
-              , match = DESKTOP_FILENAME_REGEXP.exec(name);
+            let name = f.get_name();
+            let match = DESKTOP_FILENAME_REGEXP.exec(name);
 
-            if (match)
+            if (match) {
                 this._desktops.push(match[1]);
+            }
         }, this);
 
-        let m = this._monitor = new Monitor.DirectoryMonitor(Settings.EMACS_DESKTOP_DIR);
+        let m = this._monitor = new Monitor.DirectoryMonitor(
+            Settings.EMACS_DESKTOP_DIR);
         m.connect('created', this._onFileCreated.bind(this));
         m.connect('deleted', this._onFileDeleted.bind(this));
 
@@ -40,11 +41,12 @@ const RunCompleter = new Lang.Class({
     },
 
     _onFileCreated: function(source, info) {
-        let name = info.get_basename()
-          , match = DESKTOP_FILENAME_REGEXP.exec(name);
+        let name = info.get_basename();
+        let match = DESKTOP_FILENAME_REGEXP.exec(name);
 
-        if (match)
+        if (match) {
             this._desktops.push(match[1]);
+        }
     },
 
     _onFileDeleted: function(source, info) {
@@ -52,10 +54,10 @@ const RunCompleter = new Lang.Class({
     },
 
     getCompletion: function(text) {
-        let common = ''
-          , notInit = true
-          , items = this._desktops
-          , itemsLen = items.length;
+        let common = '';
+        let notInit = true;
+        let items = this._desktops;
+        let itemsLen = items.length;
 
         for (let i = 0; i < itemsLen; i++) {
             if (items[i].indexOf(text) != 0)
@@ -67,22 +69,27 @@ const RunCompleter = new Lang.Class({
             }
             common = this._getCommon(common, items[i]);
         }
-        if (common.length)
+        if (common.length) {
             return common.substr(text.length);
+        }
+
         return common;
     },
 
     _getCommon: function(s1, s2) {
-        if (s1 == null)
+        if (s1 === null) {
             return s2;
+        }
 
         let k = 0
         for (; k < s1.length && k < s2.length; k++) {
-            if (s1[k] != s2[k])
+            if (s1[k] != s2[k]) {
                 break;
+            }
         }
-        if (k == 0)
+        if (k === 0) {
             return '';
+        }
         return s1.substr(0, k);
     }
 });
