@@ -1,12 +1,7 @@
 const GLib = imports.gi.GLib;
+const Polkit = imports.gi.Polkit;
 
-let UID;
-
-(function() {
-    let ret = GLib.spawn_sync(null, ['/usr/bin/id', '-u'], null, 0, null);
-    UID = new String(ret[1]).trim();
-}());
-
+const UID = Polkit.UnixUser.new_for_name(GLib.get_user_name()).get_uid().toString();
 const EMACS_DIR = GLib.build_filenamev([GLib.get_home_dir(), '.emacs.d']);
 const EMACS_DESKTOP_DIR = GLib.build_filenamev([EMACS_DIR, 'desktop']);
 const EMACS_SOCKETS_DIR = GLib.build_filenamev(['/', 'tmp', 'emacs' + UID]);
