@@ -53,6 +53,20 @@ and add this to your `init.el` file
   (desktop-save-mode 1))
 ```
 
+## Connecting to remote servers
+
+To connect to the remote server, you will need to copy server file to
+the local `~/.emacs.d/server/` directory. This extension will
+automatically detect the presence of server file and add button to
+launch emacsclient to the remote server.
+
+> When you start a TCP Emacs server, Emacs creates a server file
+> containing the TCP information to be used by emacsclient to connect
+> to the server. The variable server-auth-dir specifies the directory
+> containing the server file; by default, this is ~/.emacs.d/server/.
+>
+> [emacsclient Options](https://www.gnu.org/software/emacs/manual/html_node/emacs/emacsclient-Options.html)
+
 ## Debugging
 
 If there are problems with launching or killing emacs servers, you can
