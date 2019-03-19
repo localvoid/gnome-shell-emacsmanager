@@ -1,4 +1,3 @@
-const Lang = imports.lang;
 const Signals = imports.signals;
 
 const GLib = imports.gi.GLib;
@@ -13,10 +12,9 @@ const Monitor = Ext.imports.monitor;
 
 const DESKTOP_FILENAME_REGEXP = /^([^\.]+)\.desktop$/;
 
-const RunCompleter = new Lang.Class({
-    Name: 'EmacsManager.RunCompleter',
+const RunCompleter = class {
 
-    _init: function() {
+    constructor() {
         this._desktops = [];
 
         Utils.eachFile(Settings.EMACS_DESKTOP_DIR, function(f) {
@@ -34,26 +32,26 @@ const RunCompleter = new Lang.Class({
         m.connect('deleted', this._onFileDeleted.bind(this));
 
         m.enable();
-    },
+    }
 
-    destroy: function() {
+    destroy() {
         this._monitor.disable();
-    },
+    }
 
-    _onFileCreated: function(source, info) {
+    _onFileCreated(source, info) {
         let name = info.get_basename();
         let match = DESKTOP_FILENAME_REGEXP.exec(name);
 
         if (match) {
             this._desktops.push(match[1]);
         }
-    },
+    }
 
-    _onFileDeleted: function(source, info) {
+    _onFileDeleted(source, info) {
         delete this._desktops[this._desktops.indexOf(info.get_basename())];
-    },
+    }
 
-    getCompletion: function(text) {
+    getCompletion(text) {
         let common = '';
         let notInit = true;
         let items = this._desktops;
@@ -74,9 +72,9 @@ const RunCompleter = new Lang.Class({
         }
 
         return common;
-    },
+    }
 
-    _getCommon: function(s1, s2) {
+    _getCommon(s1, s2) {
         if (s1 === null) {
             return s2;
         }
@@ -92,4 +90,4 @@ const RunCompleter = new Lang.Class({
         }
         return s1.substr(0, k);
     }
-});
+};

@@ -5,5 +5,5 @@
     "description": "Manage local emacs server instances from status bar",
     "original-authors": ["localvoid@gmail.com"],
     "url": "http://github.com/localvoid/gnome-shell-emacsmanager",
-    "shell-version": ["3.14"]
+    "shell-version": ["3.32"]
 }
