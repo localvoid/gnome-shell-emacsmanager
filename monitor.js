@@ -1,16 +1,14 @@
 const Gio = imports.gi.Gio;
 const Signals = imports.signals;
-const Lang = imports.lang;
 
-const DirectoryMonitor = new Lang.Class({
-    Name: 'EmacsManager.DirectoryMonitor',
+const DirectoryMonitor = class {
 
-    _init: function(path) {
+    constructor(path) {
         this.path = path;
         this._monitor = null;
-    },
+    }
 
-    enable: function() {
+    enable() {
         if (!this._monitor) {
             this._file = Gio.file_new_for_path(this.path);
             try {
@@ -21,16 +19,16 @@ const DirectoryMonitor = new Lang.Class({
                 logError(e, 'failed to register file monitor');
             }
         }
-    },
+    }
 
-    disable: function() {
+    disable() {
         if (this._monitor) {
             this._monitor.cancel();
             this._monitor = null;
         }
-    },
+    }
 
-    _onChanged: function(monitor, file, otherFile, eventType) {
+    _onChanged(monitor, file, otherFile, eventType) {
         switch (eventType) {
         case Gio.FileMonitorEvent.CREATED:
             if (file.get_path() === this.path)
@@ -43,6 +41,6 @@ const DirectoryMonitor = new Lang.Class({
             break;
         }
     }
-});
+};
 
 Signals.addSignalMethods(DirectoryMonitor.prototype);

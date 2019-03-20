@@ -1,6 +1,7 @@
 const Lang = imports.lang;
 const Signals = imports.signals;
 
+const GObject = imports.gi.GObject;
 const Pango = imports.gi.Pango;
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
@@ -16,12 +17,10 @@ const Main = imports.ui.main;
 const DIALOG_GROW_TIME = 0.1;
 
 
-const RunDialog = new Lang.Class({
-    Name: 'EmacsManager.RunDialog',
-    Extends: ModalDialog.ModalDialog,
+const RunDialog = class extends ModalDialog.ModalDialog {
 
-    _init: function(emacsManager, completer) {
-        this.parent({ styleClass: 'run-dialog',
+    constructor(emacsManager, completer) {
+        super({ styleClass: 'run-dialog',
                       destroyOnClose: false });
 
         this._emacsManager = emacsManager;
@@ -81,9 +80,9 @@ const RunDialog = new Lang.Class({
         this.setButtons([{ action: this.close.bind(this),
                            label: _('Close'),
                            key: Clutter.Escape }]);
-    },
+    }
 
-    _onKeyPress: function(o, e) {
+    _onKeyPress(o, e) {
         let symbol = e.get_key_symbol();
 
         if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
@@ -111,13 +110,13 @@ const RunDialog = new Lang.Class({
             return Clutter.EVENT_STOP;
         }
         return Clutter.EVENT_PROPAGATE;
-    },
+    }
 
-    _getCompletion: function(text) {
+    _getCompletion(text) {
         return this._completer.getCompletion(text);
-    },
+    }
 
-    _run : function(input) {
+    _run(input) {
         this._commandError = false;
 
         if (input) {
@@ -127,9 +126,9 @@ const RunDialog = new Lang.Class({
                 this._showError(e.message);
             }
         }
-    },
+    }
 
-    _showError : function(message) {
+    _showError(message) {
         this._commandError = true;
         this._errorMessage.set_text(message);
 
@@ -149,22 +148,20 @@ const RunDialog = new Lang.Class({
                                       })
             });
         }
-    },
+    }
 
-    open: function() {
+    open() {
         this._errorBox.hide();
         this._entryText.set_text('');
         this._commandError = false;
-        this.parent();
+        super.open();
     }
-});
+};
 
-const RemoteServerView = new Lang.Class({
-    Name: 'EmacsManager.RemoteServerView',
-    Extends: PopupMenu.PopupBaseMenuItem,
+const RemoteServerView = class extends PopupMenu.PopupBaseMenuItem {
 
-    _init: function(server) {
-        this.parent();
+    constructor(server) {
+        super();
 
         this.server = server;
 
@@ -179,19 +176,17 @@ const RemoteServerView = new Lang.Class({
         }));
 
         this.connect('activate', this._onActivate.bind(this));
-    },
+    }
 
-    _onActivate: function(e, c) {
+    _onActivate(e, c) {
         this.server.startClient();
     }
-});
+};
 
-const ServerView = new Lang.Class({
-    Name: 'EmacsManager.ServerView',
-    Extends: PopupMenu.PopupBaseMenuItem,
+const ServerView = class extends PopupMenu.PopupBaseMenuItem {
 
-    _init: function(server) {
-        this.parent();
+    constructor(server) {
+        super();
 
         this.server = server;
         server.connect('state-changed', this._onStateChanged.bind(this));
@@ -215,34 +210,32 @@ const ServerView = new Lang.Class({
         this.actor.add(killButton, { span: -1, align: St.Align.END });
 
         this.connect('activate', this._onActivate.bind(this));
-    },
+    }
 
-    _onKill: function(e) {
+    _onKill(e) {
         this.server.kill();
-    },
+    }
 
-    _syncState: function() {
+    _syncState() {
         if (this.server.state === 'RUNNING')
             this.setSensitive(true);
         else
             this.setSensitive(false);
-    },
+    }
 
-    _onStateChanged: function(source, state) {
+    _onStateChanged(source, state) {
         this._syncState();
-    },
+    }
 
-    _onActivate: function(e, c) {
+    _onActivate(e, c) {
         this.server.startClient();
     }
-});
+};
 
-const RemoteServerListView = new Lang.Class({
-    Name: 'EmacsManager.RemoteServerListView',
-    Extends: PopupMenu.PopupMenuSection,
+const RemoteServerListView = class extends PopupMenu.PopupMenuSection {
 
-    _init: function(emacsManager) {
-        this.parent();
+    constructor(emacsManager) {
+        super();
 
         this.serverCount = 0;
         this._serverViews = {};
@@ -257,36 +250,34 @@ const RemoteServerListView = new Lang.Class({
             let s = servers[name];
             this._createServer(s);
         }
-    },
+    }
 
-    _createServer: function(srv) {
+    _createServer(srv) {
         this.serverCount += 1;
         let v = new RemoteServerView(srv);
         this._serverViews[srv.name] = v;
         this.addMenuItem(v);
         if (this.serverCount === 1)
             this.emit('empty', false);
-    },
+    }
 
-    _onServerCreated: function(source, srv) {
+    _onServerCreated(source, srv) {
         this._createServer(srv);
-    },
+    }
 
-    _onServerDeleted: function(source, srv) {
+    _onServerDeleted(source, srv) {
         this.serverCount -= 1;
         this._serverViews[srv.name].destroy();
         delete this._serverViews[srv];
         if (this.serverCount === 0)
             this.emit('empty', true);
     }
-});
+};
 
-const ServerListView = new Lang.Class({
-    Name: 'EmacsManager.ServerListView',
-    Extends: PopupMenu.PopupMenuSection,
+const ServerListView = class extends PopupMenu.PopupMenuSection {
 
-    _init: function(emacsManager) {
-        this.parent();
+    constructor(emacsManager) {
+        super();
 
         this.serverCount = 0;
         this._serverViews = {};
@@ -301,53 +292,49 @@ const ServerListView = new Lang.Class({
             let s = servers[name];
             this._createServer(s);
         }
-    },
+    }
 
-    _createServer: function(srv) {
+    _createServer(srv) {
         this.serverCount += 1;
         let v = new ServerView(srv);
         this._serverViews[srv.name] = v;
         this.addMenuItem(v);
         if (this.serverCount === 1)
             this.emit('empty', false);
-    },
+    }
 
-    _onServerCreated: function(source, srv) {
+    _onServerCreated(source, srv) {
         this._createServer(srv);
-    },
+    }
 
-    _onServerDeleted: function(source, srv) {
+    _onServerDeleted(source, srv) {
         this.serverCount -= 1;
         this._serverViews[srv.name].destroy();
         delete this._serverViews[srv];
         if (this.serverCount === 0)
             this.emit('empty', true);
     }
-});
+};
 
 
-const MenuView = new Lang.Class({
-    Name: 'EmacsManager.MenuView',
-    Extends: PopupMenu.PopupMenuSection,
+const MenuView = class extends PopupMenu.PopupMenuSection {
 
-    _init: function(mainView) {
-        this.parent();
+    constructor(mainView) {
+        super();
         this._mainView = mainView;
         this.addAction('Start server', this._onStartServer.bind(this));
-    },
+    }
 
-    _onStartServer: function() {
+    _onStartServer() {
         this._mainView.popupStartServerDialog();
     }
-});
+};
 
 
-const StatusButton = new Lang.Class({
-    Name: 'EmacsManager.Button',
-    Extends: PanelMenu.Button,
+const StatusButton = GObject.registerClass(class EmacsManagerStatusButton extends PanelMenu.Button {
 
-    _init: function(mainView, emacsManager) {
-        this.parent(0.0, _('Emacs Manager'));
+    _init(mainView, emacsManager) {
+        super._init(0.0, _('Emacs Manager'));
 
         this._hbox = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
         this._hbox.add_child(new St.Icon({ style_class: 'system-status-icon',
@@ -371,9 +358,9 @@ const StatusButton = new Lang.Class({
         this._syncEmpty();
 
         this.menu.addMenuItem(this._menuView);
-    },
+    }
 
-    _syncEmpty: function() {
+    _syncEmpty() {
         if (this._serverListView.serverCount > 0 ||
             this._remoteServerListView.serverCount > 0) {
             if (!this._separator) {
@@ -387,29 +374,28 @@ const StatusButton = new Lang.Class({
                 this._separator = null;
             }
         }
-    },
+    }
 
-    _onEmpty: function(source, isEmpty) {
+    _onEmpty(source, isEmpty) {
         this._syncEmpty();
     }
 });
 
-const View = new Lang.Class({
-    Name: 'EmacsManager.View',
+const View = class {
 
-    _init: function(emacsManager, runCompleter) {
+    constructor(emacsManager, runCompleter) {
         this._runDialog = new RunDialog(emacsManager, runCompleter);
         this._statusButton = new StatusButton(this, emacsManager);
 
         Main.panel.addToStatusArea('emacs-manager', this._statusButton);
-    },
+    }
 
-    popupStartServerDialog: function() {
+    popupStartServerDialog() {
         this._runDialog.open();
-    },
+    }
 
-    destroy: function() {
+    destroy() {
         this._statusButton.destroy();
         this._runDialog.destroy();
     }
-});
+};

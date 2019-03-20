@@ -1,5 +1,4 @@
 const Signals = imports.signals;
-const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
@@ -19,42 +18,41 @@ function _isServerNameValid(name) {
 }
 
 
-const Server = new Lang.Class({
-    Name: 'EmacsManager.Server',
+const Server = class {
 
-    _init: function(name, state) {
+    constructor(name, state) {
         this.name = name;
         this._state = state || 'LAUNCHING';
-    },
+    }
 
     set state(v) {
         if (this._state !== v) {
             this._state = v;
             this.emit('state-changed', v);
         }
-    },
+    }
     get state() {
         return this._state;
-    },
+    }
 
-    kill: function() {
+    kill() {
         if (this._state === 'RUNNING') {
             this.state = 'KILLING';
             Tasks.killServer(this.name);
         }
-    },
+    }
 
-    startClient: function() {
+    startClient() {
         if (this._state === 'RUNNING')
             Tasks.startClient(this.name);
     }
-});
+};
 Signals.addSignalMethods(Server.prototype);
 
 
-const RemoteServer = new Lang.Class({
-    Name: 'EmacsManager.RemoteServer',
-    _init: function(name) {
+const RemoteServer = class {
+
+    constructor(name) {
         let [result, contents] =
                 Gio.file_new_for_path(GLib.build_filenamev(
                     [Settings.EMACS_SERVERS_DIR, name])).load_contents(null);
@@ -62,18 +60,17 @@ const RemoteServer = new Lang.Class({
 
         this.host = contents.match(/^([^\s]+)/)[1];
         this.name = name;
-    },
+    }
 
-    startClient: function() {
+    startClient() {
         Tasks.startRemoteClient(this.name);
     }
-});
+};
 
 
-const EmacsManager = new Lang.Class({
-    Name: 'EmacsManager.EmacsManager',
+const EmacsManager = class {
 
-    _init: function() {
+    constructor() {
         this._servers = {};
         this._remoteServers = {};
 
@@ -97,9 +94,9 @@ const EmacsManager = new Lang.Class({
                 this._createRemoteServer(name);
             }
         }, this);
-    },
+    }
 
-    _syncLocalServers: function() {
+    _syncLocalServers() {
         Utils.eachFile(Settings.EMACS_SOCKETS_DIR, function(f) {
             let name = f.get_name();
 
@@ -107,25 +104,25 @@ const EmacsManager = new Lang.Class({
                 this._createServer(name);
             }
         }, this);
-    },
+    }
 
-    destroy: function() {
+    destroy() {
         this._socketsMonitor.disable();
         this._serversMonitor.disable();
-    },
+    }
 
-    _createServer: function(name) {
+    _createServer(name) {
         let s = new Server(name, 'RUNNING');
         this._servers[name] = s;
         this.emit('server-created', s);
-    },
-    _createRemoteServer: function(name) {
+    }
+    _createRemoteServer(name) {
         let s = new RemoteServer(name);
         this._remoteServers[name] = s;
         this.emit('remote-server-created', s);
-    },
+    }
 
-    _onSocketFileCreated: function(source, info) {
+    _onSocketFileCreated(source, info) {
         let name = info.get_basename();
         let s = this._servers[name];
 
@@ -136,9 +133,9 @@ const EmacsManager = new Lang.Class({
                 this._createServer(name);
             }
         }
-    },
+    }
 
-    _onSocketFileDeleted: function(source, info) {
+    _onSocketFileDeleted(source, info) {
         let name = info.get_basename();
         let s = this._servers[name];
 
@@ -146,16 +143,16 @@ const EmacsManager = new Lang.Class({
             this.emit('server-deleted', s);
             delete this._servers[name];
         }
-    },
+    }
 
-    _onRemoteSocketFileCreated: function(source, info) {
+    _onRemoteSocketFileCreated(source, info) {
         let name = info.get_basename();
         if (_isServerNameValid(name)) {
             this._createRemoteServer(name);
         }
-    },
+    }
 
-    _onRemoteSocketFileDeleted: function(source, info) {
+    _onRemoteSocketFileDeleted(source, info) {
         let name = info.get_basename();
         let s = this._remoteServers[name];
 
@@ -163,9 +160,9 @@ const EmacsManager = new Lang.Class({
             this.emit('remote-server-deleted', s);
             delete this._remoteServers[name];
         }
-    },
+    }
 
-    startServer: function(name) {
+    startServer(name) {
         if (!_isServerNameValid(name)) {
             throw new Error('Invalid server name');
         }
@@ -176,5 +173,5 @@ const EmacsManager = new Lang.Class({
 
         Tasks.startServer(name);
     }
-});
+};
 Signals.addSignalMethods(EmacsManager.prototype);

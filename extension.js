@@ -1,5 +1,3 @@
-const Lang = imports.lang;
-
 const ExtUtils = imports.misc.extensionUtils;
 const Ext = ExtUtils.getCurrentExtension();
 
@@ -7,10 +5,9 @@ const Core = Ext.imports.core;
 const Autocomplete = Ext.imports.autocomplete;
 const Views = Ext.imports.views;
 
-const Extension = new Lang.Class({
-    Name: 'EmacsManager.Extension',
+const Extension = class {
 
-    enable: function() {
+    enable() {
         try {
             this._emacsManager = new Core.EmacsManager();
             this._runCompleter = new Autocomplete.RunCompleter();
@@ -29,9 +26,9 @@ const Extension = new Lang.Class({
 
             throw e;
         }
-    },
+    }
 
-    disable: function() {
+    disable() {
         this._view.destroy();
         this._runCompleter.destroy();
         this._emacsManager.destroy();
@@ -40,7 +37,7 @@ const Extension = new Lang.Class({
         this._runCompleter = null;
         this._emacsManager = null;
     }
-});
+};
 
 function init(metadata) {
     return new Extension();
